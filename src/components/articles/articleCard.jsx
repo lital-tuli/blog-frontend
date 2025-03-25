@@ -1,3 +1,4 @@
+// src/components/articles/ArticleCard.jsx
 import { Link } from 'react-router-dom';
 
 const ArticleCard = ({ article }) => {

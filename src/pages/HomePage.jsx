@@ -1,8 +1,9 @@
+// src/pages/HomePage.jsx
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchArticles } from '../store/articlesSlice';
-import ArticleCard from '../components/ArticleCard';
+import ArticleCard from '../components/articles/ArticleCard';
 
 const HomePage = () => {
   const dispatch = useDispatch();

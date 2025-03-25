@@ -1,5 +1,5 @@
+// src/App.jsx
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
 import './App.css'
 
 // Layout Components
@@ -14,17 +14,8 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector(state => state.auth)
-  
-  if (!isAuthenticated) {
-    // Redirect to login if not authenticated
-    return <Navigate to="/login" replace />
-  }
-  
-  return children
-}
+// Common Components
+import PrivateRoute from './components/common/PrivateRoute'
 
 function App() {
   return (
@@ -44,25 +35,25 @@ function App() {
           <Route 
             path="/articles/new" 
             element={
-              <ProtectedRoute>
+              <PrivateRoute>
                 <ArticleForm />
-              </ProtectedRoute>
+              </PrivateRoute>
             } 
           />
           <Route 
             path="/articles/:id/edit" 
             element={
-              <ProtectedRoute>
+              <PrivateRoute>
                 <ArticleForm />
-              </ProtectedRoute>
+              </PrivateRoute>
             } 
           />
           <Route 
             path="/profile" 
             element={
-              <ProtectedRoute>
+              <PrivateRoute>
                 <ProfilePage />
-              </ProtectedRoute>
+              </PrivateRoute>
             } 
           />
           
