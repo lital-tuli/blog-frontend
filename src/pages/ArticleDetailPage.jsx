@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchArticleById, deleteArticle } from '../store/articlesSlice';
 import { fetchComments } from '../store/commentSlice';
-import CommentSection from '../components/CommentSection';
+import CommentSection from '../components/comments/CommentSection';
 
 const ArticleDetailPage = () => {
   const { id } = useParams();
