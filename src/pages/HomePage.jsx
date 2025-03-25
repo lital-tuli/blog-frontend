@@ -13,40 +13,66 @@ const HomePage = () => {
     dispatch(fetchArticles({ limit: 3, status: 'published' }));
   }, [dispatch]);
 
-  if (isLoading && articles.length === 0) {
-    return <div className="loading">Loading articles...</div>;
-  }
-
-  if (error) {
-    return <div className="error">Error: {error.message}</div>;
-  }
-
   return (
-    <div className="home-container">
-      <section className="hero">
-        <div className="hero-content">
-          <h1>Welcome to Our Blog</h1>
-          <p>Discover the latest articles and share your thoughts</p>
-          <Link to="/articles" className="button primary">Explore All Articles</Link>
+    <div className="container py-5">
+      {/* Hero Section */}
+      <div className="row mb-5">
+        <div className="col-md-8 mx-auto text-center">
+          <div className="bg-primary text-white p-5 rounded">
+            <h1 className="display-4">Welcome to Our Blog</h1>
+            <p className="lead">Discover the latest articles and share your thoughts</p>
+            <Link to="/articles" className="btn btn-light btn-lg mt-3">
+              Explore All Articles
+            </Link>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <section className="latest-articles">
-        <div className="section-header">
-          <h2>Latest Articles</h2>
-          <Link to="/articles" className="see-all-link">See all articles</Link>
+      {/* Latest Articles Section */}
+      <div className="row">
+        <div className="col-12">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h2>Latest Articles</h2>
+            <Link to="/articles" className="btn btn-sm btn-outline-primary">
+              See all articles
+            </Link>
+          </div>
         </div>
+      </div>
 
-        <div className="articles-grid">
-          {articles.length > 0 ? (
-            articles.map(article => (
-              <ArticleCard key={article.id} article={article} />
-            ))
-          ) : (
-            <p>No articles published yet.</p>
-          )}
+      {/* Loading State */}
+      {isLoading && articles.length === 0 && (
+        <div className="text-center my-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Loading articles...</p>
         </div>
-      </section>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          Error: {error.message}
+        </div>
+      )}
+
+      {/* Articles Grid */}
+      <div className="row g-4">
+        {articles.length > 0 ? (
+          articles.map(article => (
+            <div key={article.id} className="col-md-4">
+              <ArticleCard article={article} />
+            </div>
+          ))
+        ) : (
+          !isLoading && (
+            <div className="col-12 text-center py-5">
+              <p className="lead">No articles published yet.</p>
+            </div>
+          )
+        )}
+      </div>
     </div>
   );
 };
