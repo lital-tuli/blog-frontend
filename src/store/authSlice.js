@@ -17,9 +17,11 @@ export const registerUser = createAsyncThunk(
     try {
       const response = await authService.register(userData);
       
-      // Save tokens and user data to localStorage
+      // Save tokens
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
+      
+      // Save user info
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
       return response.data;
@@ -35,24 +37,39 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
+      // Get tokens from login endpoint
       const response = await authService.login(credentials);
       
-      // Store user info
-      const userData = {
-        id: response.data.user_id,
-        username: response.data.username
-      };
-      
-      // Save tokens and user data to localStorage
+      // Save tokens
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
-      localStorage.setItem('user', JSON.stringify(userData));
       
-      return {
-        user: userData,
-        access: response.data.access,
-        refresh: response.data.refresh
-      };
+      // Fetch user details with the token
+      try {
+        const userResponse = await authService.getUserDetails();
+        const userData = userResponse.data;
+        
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        return {
+          user: userData,
+          access: response.data.access,
+          refresh: response.data.refresh
+        };
+      } catch (userError) {
+        // If user details can't be fetched, create basic user object from token
+        const userData = {
+          username: credentials.username
+        };
+        
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        return {
+          user: userData,
+          access: response.data.access,
+          refresh: response.data.refresh
+        };
+      }
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: 'Login failed' }

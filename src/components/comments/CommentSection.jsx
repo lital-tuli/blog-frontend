@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { addComment, addReply, deleteComment } from '../../store/commentSlice';
+import { addComment, addReply, deleteComment } from '../../store/commentsSlice';
 
 const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText = "Post Comment" }) => {
   const [commentText, setCommentText] = useState('');

@@ -105,8 +105,15 @@ const articlesSlice = createSlice({
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.articles = action.payload.results;
-        state.totalPages = action.payload.total_pages;
+        // Handle both paginated and non-paginated responses
+        if (action.payload.results) {
+          state.articles = action.payload.results;
+          state.totalPages = action.payload.total_pages || 
+                            Math.ceil(action.payload.count / 10); // Assuming 10 per page
+        } else {
+          state.articles = action.payload;
+          state.totalPages = 1;
+        }
       })
       .addCase(fetchArticles.rejected, (state, action) => {
         state.isLoading = false;

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Create axios instance with base URL
+// Create axios instance with correct base URL
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1/',
+  baseURL: 'http://localhost:8000/api/',
 });
 
 // Add a request interceptor to attach the JWT token to every request
@@ -35,7 +35,7 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
         
-        const response = await axios.post('http://localhost:8000/api/v1/auth/token/refresh/', {
+        const response = await axios.post('http://localhost:8000/api/auth/token/refresh/', {
           refresh: refreshToken
         });
         
@@ -61,7 +61,8 @@ api.interceptors.response.use(
 // Auth Service
 export const authService = {
   register: (userData) => api.post('auth/register/', userData),
-  login: (credentials) => api.post('auth/login/', credentials),
+  login: (credentials) => api.post('auth/token/', credentials),
+  getUserDetails: () => api.get('auth/user/'),
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -81,16 +82,16 @@ export const articlesService = {
 
 // Comments Service
 export const commentsService = {
-  create: (commentData) => api.post('comments/', commentData),
+  create: (commentData) => api.post(`articles/${commentData.article}/comments/`, commentData),
   reply: (commentId, replyData) => api.post(`comments/${commentId}/reply/`, replyData),
   delete: (id) => api.delete(`comments/${id}/`)
 };
 
 // User Profile Service
 export const profileService = {
-  getProfile: (id) => api.get(`profiles/${id}/`),
-  getCurrentUserProfile: () => api.get('profiles/me/'),
-  updateProfile: (id, profileData) => api.put(`profiles/${id}/`, profileData)
+  getProfile: (id) => api.get(`auth/profile/${id}/`),
+  getCurrentUserProfile: () => api.get('auth/profile/'),
+  updateProfile: (id, profileData) => api.put(`auth/profile/${id}/`, profileData)
 };
 
 export default api;
