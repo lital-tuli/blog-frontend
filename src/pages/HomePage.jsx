@@ -17,29 +17,31 @@ const HomePage = () => {
   return (
     <div className="container py-5">
       {/* Hero Section */}
-      <div className="row mb-5">
-        <div className="col-md-8 mx-auto text-center">
-          <div className="bg-primary text-white p-5 rounded">
-            <h1 className="display-4">Welcome to Our Blog</h1>
-            <p className="lead">Discover the latest articles and share your thoughts</p>
-            <Link to="/articles" className="btn btn-light btn-lg mt-3">
-              Explore All Articles
-            </Link>
-          </div>
-        </div>
+<div className="row mb-5">
+  <div className="col-md-10 mx-auto">
+    <div className="bg-primary text-white p-4 p-md-5 rounded shadow">
+      <div className="text-center py-4">
+        <h1 className="display-4 fw-bold">Welcome to Our Blog</h1>
+        <p className="lead fs-4 opacity-90">Discover the latest articles and share your thoughts</p>
+        <Link to="/articles" className="btn btn-light btn-lg mt-3 shadow-sm">
+          <i className="bi bi-journal-text me-2"></i>Explore All Articles
+        </Link>
       </div>
+    </div>
+  </div>
+</div>
 
-      {/* Latest Articles Section */}
-      <div className="row">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2>Latest Articles</h2>
-            <Link to="/articles" className="btn btn-sm btn-outline-primary">
-              See all articles
-            </Link>
-          </div>
-        </div>
-      </div>
+{/* Latest Articles Section */}
+<div className="row">
+  <div className="col-12">
+    <div className="d-flex justify-content-between align-items-center mb-4">
+      <h2 className="fw-bold">Latest Articles</h2>
+      <Link to="/articles" className="btn btn-sm btn-outline-primary">
+        See all articles <i className="bi bi-arrow-right ms-1"></i>
+      </Link>
+    </div>
+  </div>
+</div>
 
       {/* Loading State */}
       {isLoading && articles.length === 0 && (

@@ -108,119 +108,135 @@ const ArticleForm = () => {
   
   return (
     <div className="container py-5">
-      <div className="row">
-        <div className="col-lg-8 mx-auto">
-          <div className="card shadow">
-            <div className="card-body p-4">
-              <h1 className="card-title text-center mb-4">
-                {isEditMode ? 'Edit Article' : 'Create New Article'}
-              </h1>
-              
-              <Formik
-                initialValues={initialValues}
-                validationSchema={ArticleSchema}
-                onSubmit={handleSubmit}
-                enableReinitialize={true}
-              >
-                {({ isSubmitting }) => (
-                  <Form>
-                    <div className="mb-3">
-                      <label htmlFor="title" className="form-label">Title</label>
-                      <Field 
-                        type="text" 
-                        name="title" 
-                        id="title" 
-                        className="form-control" 
-                      />
-                      <ErrorMessage 
-                        name="title" 
-                        component="div" 
-                        className="text-danger small mt-1" 
-                      />
+    <div className="row">
+      <div className="col-lg-10 mx-auto">
+        <div className="card shadow border-0">
+          <div className="card-body p-4 p-md-5">
+            <h1 className="card-title text-center mb-4 fw-bold">
+              {isEditMode ? (
+                <><i className="bi bi-pencil-square me-2"></i>Edit Article</>
+              ) : (
+                <><i className="bi bi-plus-circle me-2"></i>Create New Article</>
+              )}
+            </h1>
+            
+            <Formik
+              initialValues={initialValues}
+              validationSchema={ArticleSchema}
+              onSubmit={handleSubmit}
+              enableReinitialize={true}
+            >
+              {({ isSubmitting }) => (
+                <Form>
+                  <div className="mb-3">
+                    <label htmlFor="title" className="form-label">Title</label>
+                    <Field 
+                      type="text" 
+                      name="title" 
+                      id="title" 
+                      className="form-control form-control-lg" 
+                      placeholder="Enter article title"
+                    />
+                    <ErrorMessage 
+                      name="title" 
+                      component="div" 
+                      className="text-danger small mt-1" 
+                    />
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label htmlFor="content" className="form-label">Content</label>
+                    <Field 
+                      as="textarea" 
+                      name="content" 
+                      id="content" 
+                      className="form-control" 
+                      rows="15"
+                      placeholder="Write your article content here..."
+                    />
+                    <ErrorMessage 
+                      name="content" 
+                      component="div" 
+                      className="text-danger small mt-1" 
+                    />
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label htmlFor="tags" className="form-label">
+                      <i className="bi bi-tags me-1"></i>
+                      Tags (comma separated)
+                    </label>
+                    <Field 
+                      type="text" 
+                      name="tags" 
+                      id="tags" 
+                      className="form-control" 
+                      placeholder="e.g. programming, web development, react"
+                    />
+                    <ErrorMessage 
+                      name="tags" 
+                      component="div" 
+                      className="text-danger small mt-1" 
+                    />
+                    <div className="form-text">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Example: programming, web development, react
                     </div>
-                    
-                    <div className="mb-3">
-                      <label htmlFor="content" className="form-label">Content</label>
-                      <Field 
-                        as="textarea" 
-                        name="content" 
-                        id="content" 
-                        className="form-control" 
-                        rows="15"
-                      />
-                      <ErrorMessage 
-                        name="content" 
-                        component="div" 
-                        className="text-danger small mt-1" 
-                      />
-                    </div>
-                    
-                    <div className="mb-3">
-                      <label htmlFor="tags" className="form-label">Tags (comma separated)</label>
-                      <Field 
-                        type="text" 
-                        name="tags" 
-                        id="tags" 
-                        className="form-control" 
-                      />
-                      <ErrorMessage 
-                        name="tags" 
-                        component="div" 
-                        className="text-danger small mt-1" 
-                      />
-                      <div className="form-text">
-                        Example: programming, web development, react
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label htmlFor="status" className="form-label">Status</label>
-                      <Field 
-                        as="select" 
-                        name="status" 
-                        id="status" 
-                        className="form-select"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="archived">Archived</option>
-                      </Field>
-                      <ErrorMessage 
-                        name="status" 
-                        component="div" 
-                        className="text-danger small mt-1" 
-                      />
-                    </div>
-                    
-                    <div className="d-flex justify-content-end gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => navigate(-1)} 
-                        className="btn btn-secondary"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        type="submit" 
-                        disabled={isSubmitting} 
-                        className="btn btn-primary"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Saving...
-                          </>
-                        ) : (isEditMode ? 'Update Article' : 'Create Article')}
-                      </button>
-                    </div>
-                  </Form>
-                )}
-              </Formik>
-            </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label htmlFor="status" className="form-label">Status</label>
+                    <Field 
+                      as="select" 
+                      name="status" 
+                      id="status" 
+                      className="form-select"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="archived">Archived</option>
+                    </Field>
+                    <ErrorMessage 
+                      name="status" 
+                      component="div" 
+                      className="text-danger small mt-1" 
+                    />
+                  </div>
+                  
+                  <div className="d-flex flex-wrap justify-content-end gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => navigate(-1)} 
+                      className="btn btn-secondary"
+                    >
+                      <i className="bi bi-x-circle me-1"></i>
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting} 
+                      className="btn btn-primary"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Saving...
+                        </>
+                      ) : isEditMode ? (
+                        <><i className="bi bi-check2-circle me-1"></i>Update Article</>
+                      ) : (
+                        <><i className="bi bi-plus-circle me-1"></i>Create Article</>
+                      )}
+                    </button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           </div>
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

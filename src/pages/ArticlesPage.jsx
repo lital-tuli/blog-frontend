@@ -48,44 +48,50 @@ const ArticlesPage = () => {
       <h1 className="mb-4">Articles</h1>
       
       <div className="row mb-4">
-        <div className="col-md-6">
-          <form onSubmit={handleSearch} className="d-flex">
-            <input
-              type="text"
-              placeholder="Search articles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control me-2"
-            />
-            <button type="submit" className="btn btn-primary">Search</button>
-          </form>
-        </div>
-        
-        <div className="col-md-6 mt-3 mt-md-0">
-          {filterTag && (
-            <div className="d-inline-block me-2">
-              <span className="badge bg-primary d-flex align-items-center p-2">
-                Tag: {filterTag}
-                <button 
-                  onClick={() => setFilterTag('')}
-                  className="btn-close btn-close-white ms-2"
-                  style={{ fontSize: '0.5rem' }}
-                  aria-label="Remove tag filter"
-                ></button>
-              </span>
-            </div>
-          )}
-          
-          {(searchTerm || filterTag) && (
+  <div className="col-lg-6 mb-3 mb-lg-0">
+    <form onSubmit={handleSearch} className="d-flex">
+      <input
+        type="text"
+        placeholder="Search articles..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="form-control me-2"
+        aria-label="Search"
+      />
+      <button type="submit" className="btn btn-primary">
+        <i className="bi bi-search"></i>
+        <span className="d-none d-sm-inline ms-1">Search</span>
+      </button>
+    </form>
+  </div>
+  
+  <div className="col-lg-6">
+    <div className="d-flex flex-wrap align-items-center">
+      {filterTag && (
+        <div className="me-2 mb-2">
+          <span className="badge bg-primary d-flex align-items-center p-2">
+            <i className="bi bi-tag-fill me-1"></i> {filterTag}
             <button 
-              onClick={clearFilters} 
-              className="btn btn-sm btn-outline-secondary"
-            >
-              Clear All Filters
-            </button>
-          )}
+              onClick={() => setFilterTag('')}
+              className="btn-close btn-close-white ms-2"
+              style={{ fontSize: '0.5rem' }}
+              aria-label="Remove tag filter"
+            ></button>
+          </span>
         </div>
-      </div>
+      )}
+      
+      {(searchTerm || filterTag) && (
+        <button 
+          onClick={clearFilters} 
+          className="btn btn-sm btn-outline-secondary mb-2"
+        >
+          <i className="bi bi-x-circle me-1"></i> Clear Filters
+        </button>
+      )}
+    </div>
+  </div>
+</div>
       
       {error && (
         <div className="alert alert-danger" role="alert">

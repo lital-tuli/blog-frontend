@@ -75,49 +75,55 @@ const ArticleDetailPage = () => {
 
   return (
     <div className="container py-5">
-      <div className="row">
-        <div className="col-lg-8 mx-auto">
-          <div className="card shadow">
-            <div className="card-body p-4">
-              <h1 className="card-title mb-3">{article.title}</h1>
-              
-              <div className="d-flex justify-content-between mb-4">
-                <span className="text-muted">By {article.author_username}</span>
-                <span className="text-muted">{formattedDate}</span>
-              </div>
-              
-              {article.tags && article.tags.length > 0 && (
-                <div className="mb-4">
-                  {article.tags.map((tag, index) => (
-                    <span key={index} className="badge bg-light text-dark me-2">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              
-              {isAuthor && (
-                <div className="mb-4">
-                  <Link 
-                    to={`/articles/${id}/edit`} 
-                    className="btn btn-sm btn-outline-primary me-2"
-                  >
-                    Edit Article
-                  </Link>
-                  <button 
-                    onClick={() => setShowDeleteModal(true)} 
-                    className="btn btn-sm btn-outline-danger"
-                  >
-                    Delete Article
-                  </button>
-                </div>
-              )}
-              
-              <div className="article-content mb-5">
-                {article.content.split('\n').map((paragraph, index) => (
-                  paragraph ? <p key={index} className="mb-3">{paragraph}</p> : <br key={index} />
-                ))}
-              </div>
+  <div className="row">
+    <div className="col-lg-8 mx-auto">
+      <div className="card shadow border-0">
+        <div className="card-body p-4 p-md-5">
+          <h1 className="card-title mb-3 fw-bold">{article.title}</h1>
+          
+          <div className="d-flex flex-wrap justify-content-between mb-4">
+            <span className="text-muted d-flex align-items-center mb-2 mb-md-0">
+              <i className="bi bi-person-circle me-2"></i> {article.author_username}
+            </span>
+            <span className="text-muted d-flex align-items-center">
+              <i className="bi bi-calendar me-2"></i> {formattedDate}
+            </span>
+          </div>
+          
+          {article.tags && article.tags.length > 0 && (
+            <div className="mb-4">
+              {article.tags.map((tag, index) => (
+                <span key={index} className="badge bg-light text-dark me-2 mb-2">
+                  # {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {isAuthor && (
+            <div className="mb-4 d-flex gap-2">
+              <Link 
+                to={`/articles/${id}/edit`} 
+                className="btn btn-sm btn-outline-primary"
+              >
+                <i className="bi bi-pencil me-1"></i> Edit Article
+              </Link>
+              <button 
+                onClick={() => setShowDeleteModal(true)} 
+                className="btn btn-sm btn-outline-danger"
+              >
+                <i className="bi bi-trash me-1"></i> Delete Article
+              </button>
+            </div>
+          )}
+          
+          <div className="article-content mb-5">
+            {article.content.split('\n').map((paragraph, index) => (
+              paragraph ? 
+                <p key={index} className="mb-3 text-secondary lh-lg">{paragraph}</p> : 
+                <br key={index} />
+            ))}
+          </div>
               
               {/* Comment section */}
               <CommentSection 

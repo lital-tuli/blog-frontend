@@ -15,92 +15,40 @@ const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText 
   };
   
   return (
-    <form onSubmit={handleSubmit} className="mb-4">
-      <div className="mb-3">
-        <textarea
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          placeholder={placeholder}
-          required
-          className="form-control"
-          rows="3"
-        ></textarea>
-      </div>
-      <div className="text-end">
-        <button type="submit" className="btn btn-primary">
-          {buttonText}
-        </button>
-      </div>
-    </form>
-  );
-};
-
-const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
-  const dispatch = useDispatch();
-  const [showReplyForm, setShowReplyForm] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
-  // Check if current user is the comment author
-  const isAuthor = currentUserId && comment.author_id === currentUserId;
-  
-  // Format date
-  const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-  
-  const handleReplySubmit = (replyText) => {
-    const replyData = {
-      article: articleId,
-      content: replyText,
-      reply_to: comment.id
-    };
-    
-    dispatch(addReply({ commentId: comment.id, replyData }));
-    setShowReplyForm(false);
-  };
-  
-  const handleDelete = () => {
-    dispatch(deleteComment(comment.id));
-    setShowDeleteConfirm(false);
-  };
-
-  // Maximum nesting level to prevent too deep replies
-  const maxDepth = 3;
-  
-  return (
-    <div className={`mb-4 ${depth > 0 ? 'ms-4' : ''}`}>
-      <div className={`card ${depth % 2 === 0 ? 'border-light' : ''}`}>
-        <div className="card-body">
-          <div className="d-flex justify-content-between mb-2">
-            <h6 className="card-subtitle">
-              {comment.author_username}
-            </h6>
-            <small className="text-muted">{formattedDate}</small>
-          </div>
+    <div className="comment mb-4 ms-md-4">
+    <div className="card border-light shadow-sm">
+      <div className="card-body">
+        <div className="d-flex justify-content-between align-items-start mb-2">
+          <h6 className="card-subtitle fw-bold d-flex align-items-center">
+            <i className="bi bi-person-circle me-2"></i>
+            {comment.author_username}
+          </h6>
+          <small className="text-muted">{formattedDate}</small>
+        </div>
+        
+        <p className="card-text mb-3">{comment.content}</p>
+        
+        <div className="d-flex flex-wrap gap-2">
+          {depth < maxDepth && (
+            <button 
+              onClick={() => setShowReplyForm(!showReplyForm)} 
+              className="btn btn-sm btn-light"
+            >
+              <i className={`bi ${showReplyForm ? 'bi-x' : 'bi-reply'} me-1`}></i>
+              {showReplyForm ? 'Cancel' : 'Reply'}
+            </button>
+          )}
           
-          <p className="card-text">{comment.content}</p>
-          
-          <div className="d-flex">
-            {depth < maxDepth && (
-              <button 
-                onClick={() => setShowReplyForm(!showReplyForm)} 
-                className="btn btn-sm btn-link text-decoration-none"
-              >
-                {showReplyForm ? 'Cancel' : 'Reply'}
-              </button>
-            )}
-            
-            {isAuthor && (
-              <button 
-                onClick={() => setShowDeleteConfirm(true)} 
-                className="btn btn-sm btn-link text-danger text-decoration-none ms-2"
-              >
-                Delete
-              </button>
-            )}
-          </div>
+          {isAuthor && (
+            <button 
+              onClick={() => setShowDeleteConfirm(true)} 
+              className="btn btn-sm btn-outline-danger"
+            >
+              <i className="bi bi-trash me-1"></i>
+              Delete
+            </button>
+          )}
+        </div>
           
           {showReplyForm && (
             <div className="mt-3">

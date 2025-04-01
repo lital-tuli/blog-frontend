@@ -26,9 +26,22 @@ export const registerUser = createAsyncThunk(
       
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Registration failed' }
-      );
+      // More detailed error handling
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        return rejectWithValue(error.response.data);
+      } else if (error.request) {
+        // The request was made but no response was received
+        return rejectWithValue({ 
+          message: 'No response from server. Please check your internet connection.' 
+        });
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        return rejectWithValue({ 
+          message: 'Error during request setup: ' + error.message 
+        });
+      }
     }
   }
 );
@@ -71,20 +84,71 @@ export const loginUser = createAsyncThunk(
         };
       }
     } catch (error) {
+      // More detailed error handling
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const errorData = error.response.data;
+        
+        // Handle common authentication errors with user-friendly messages
+        if (error.response.status === 401) {
+          return rejectWithValue({ 
+            message: 'Invalid credentials. Please check your username and password.' 
+          });
+        }
+        
+        return rejectWithValue(errorData);
+      } else if (error.request) {
+        // The request was made but no response was received
+        return rejectWithValue({ 
+          message: 'No response from server. Please check your internet connection.' 
+        });
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        return rejectWithValue({ 
+          message: 'Error during request setup: ' + error.message 
+        });
+      }
+    }
+  }
+);
+
+// For refreshing tokens
+export const refreshToken = createAsyncThunk(
+  'auth/refreshToken',
+  async (_, { rejectWithValue }) => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+      
+      const response = await authService.refreshToken(refreshToken);
+      localStorage.setItem('access_token', response.data.access);
+      
+      return response.data;
+    } catch (error) {
+      // If refresh fails, we'll need to re-login
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      
       return rejectWithValue(
-        error.response?.data || { message: 'Login failed' }
+        error.response?.data || { message: 'Session expired. Please log in again.' }
       );
     }
   }
 );
 
-// Auth slice
+// Create the slice directly and handle the logout action internally
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
     logout: (state) => {
+      // Call the service but don't wait for it
       authService.logout();
+      // Update the state
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
@@ -122,6 +186,22 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
+        state.error = action.payload;
+      })
+      
+      // Token refresh cases
+      .addCase(refreshToken.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(refreshToken.fulfilled, (state) => {
+        state.isLoading = false;
+        // We don't need to update state otherwise as the token is stored in localStorage
+      })
+      .addCase(refreshToken.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.user = null;
         state.error = action.payload;
       });
   }

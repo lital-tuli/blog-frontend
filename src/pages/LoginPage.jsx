@@ -1,3 +1,4 @@
+// src/pages/LoginPage.jsx
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -5,12 +6,10 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { loginUser, clearError } from '../store/authSlice';
 
-// Validation schema for the login form
+// Validation schema remains the same
 const LoginSchema = Yup.object().shape({
-  username: Yup.string()
-    .required('Username is required'),
-  password: Yup.string()
-    .required('Password is required')
+  username: Yup.string().required('Username is required'),
+  password: Yup.string().required('Password is required')
 });
 
 const LoginPage = () => {
@@ -18,13 +17,11 @@ const LoginPage = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, isLoading, error } = useSelector(state => state.auth);
   
-  // If already authenticated, redirect to home
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
     }
     
-    // Clear any previous errors
     return () => {
       dispatch(clearError());
     };
@@ -34,7 +31,6 @@ const LoginPage = () => {
     dispatch(loginUser(values))
       .unwrap()
       .then(() => {
-        // Redirect to home after successful login
         navigate('/');
       })
       .catch(error => {
@@ -46,13 +42,14 @@ const LoginPage = () => {
   };
   
   return (
-    <div className="container py-5">
-      <div className="row">
-        <div className="col-md-6 col-lg-4 mx-auto">
+    <div className="container">
+      <div className="row justify-content-center mt-5">
+        <div className="col-md-6 col-lg-5">
           <div className="card shadow">
+            <div className="card-header bg-primary text-white text-center py-3">
+              <h3>Login to Your Account</h3>
+            </div>
             <div className="card-body p-4">
-              <h1 className="card-title text-center mb-4">Login</h1>
-              
               {error && (
                 <div className="alert alert-danger" role="alert">
                   {typeof error === 'object' && error.non_field_errors 
@@ -75,26 +72,28 @@ const LoginPage = () => {
                         name="username" 
                         id="username" 
                         className="form-control" 
+                        placeholder="Enter your username"
                       />
                       <ErrorMessage 
                         name="username" 
                         component="div" 
-                        className="text-danger small mt-1" 
+                        className="text-danger mt-1" 
                       />
                     </div>
                     
-                    <div className="mb-3">
+                    <div className="mb-4">
                       <label htmlFor="password" className="form-label">Password</label>
                       <Field 
                         type="password" 
                         name="password" 
                         id="password" 
                         className="form-control" 
+                        placeholder="Enter your password"
                       />
                       <ErrorMessage 
                         name="password" 
                         component="div" 
-                        className="text-danger small mt-1" 
+                        className="text-danger mt-1" 
                       />
                     </div>
                     
@@ -118,7 +117,7 @@ const LoginPage = () => {
               
               <div className="text-center mt-3">
                 <p className="mb-0">
-                  Don't have an account? <Link to="/register">Register here</Link>
+                  Don't have an account? <Link to="/register" className="text-primary fw-bold">Register here</Link>
                 </p>
               </div>
             </div>
