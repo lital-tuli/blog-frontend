@@ -1,13 +1,11 @@
-// src/components/common/PrivateRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-/**
- * A wrapper component for routes that require authentication
- * Redirects to login page if user is not authenticated
- */
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useSelector(state => state.auth);
+const PrivateRoute = ({ children, requiresAdmin = false, requiresEditor = false }) => {
+  const { isAuthenticated, isLoading, user } = useSelector(state => state.auth);
+  
+  const isAdmin = user?.is_staff || user?.groups?.includes('management');
+  const isEditor = user?.groups?.includes('editors');
   
   // Show loading spinner while checking authentication status
   if (isLoading) {
@@ -20,12 +18,17 @@ const PrivateRoute = ({ children }) => {
     );
   }
   
+  // Check if user has required roles when specified
+  if ((requiresAdmin && !isAdmin) || (requiresEditor && !(isAdmin || isEditor))) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  // If authenticated, render the children components
+  // If authenticated and has required roles, render the children components
   return children;
 };
 

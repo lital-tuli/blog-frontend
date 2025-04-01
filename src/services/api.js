@@ -131,7 +131,7 @@ api.interceptors.response.use(
 
 export const authService = {
   register: (userData) => api.post('auth/register/', userData),
-  login: (credentials) => api.post('auth/token/', credentials), // Changed from 'token/' to 'auth/token/'
+  login: (credentials) => api.post('auth/token/', credentials),
   getUserDetails: () => api.get('auth/user/'),
   refreshToken: (refreshToken) => api.post('auth/token/refresh/', { refresh: refreshToken }),
   logout: () => {
@@ -170,8 +170,8 @@ export const profileService = {
       ? { 'Content-Type': 'multipart/form-data' } 
       : {};
     
-    return api.put(`auth/profile/${id}/`, profileData, { headers });
-  }
+      return api.put(`auth/profile/${id}/`, profileData, { headers });
+    }
 };
 
 export default api;

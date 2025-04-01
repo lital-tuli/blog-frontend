@@ -1,4 +1,3 @@
-// src/components/layout/Navbar.jsx
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/authSlice';
@@ -6,6 +5,9 @@ import { logout } from '../../store/authSlice';
 const Navbar = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector(state => state.auth);
+  
+  const isAdmin = user && (user.is_staff || (user.groups && user.groups.includes('management')));
+  const isEditor = user && (user.groups && user.groups.includes('editors'));
 
   const handleLogout = () => {
     dispatch(logout());
@@ -48,11 +50,14 @@ const Navbar = () => {
           <ul className="navbar-nav">
             {isAuthenticated ? (
               <>
-                <li className="nav-item me-2">
-                  <Link to="/articles/new" className="nav-link btn btn-outline-light btn-sm px-3 py-1 d-flex align-items-center">
-                    <i className="fas fa-plus-circle me-1"></i> New Post
-                  </Link>
-                </li>
+                {/* Only show New Post button for admin or editor users */}
+                {(isAdmin || isEditor) && (
+                  <li className="nav-item me-2">
+                    <Link to="/articles/new" className="nav-link btn btn-outline-light btn-sm px-3 py-1 d-flex align-items-center">
+                      <i className="fas fa-plus-circle me-1"></i> New Post
+                    </Link>
+                  </li>
+                )}
                 <li className="nav-item dropdown">
                   <a 
                     className="nav-link dropdown-toggle d-flex align-items-center" 

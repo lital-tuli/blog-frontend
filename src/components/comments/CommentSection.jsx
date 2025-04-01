@@ -5,7 +5,8 @@ import { addComment, addReply, deleteComment } from '../../store/commentsSlice';
 
 const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText = "Post Comment", cancelAction = null }) => {
   const [commentText, setCommentText] = useState('');
-  
+const { user } = useSelector(state => state.auth);
+const isAdmin = user?.is_staff || user?.groups?.includes('management');
   const handleSubmit = (e) => {
     e.preventDefault();
     if (commentText.trim()) {
@@ -13,6 +14,7 @@ const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText 
       setCommentText('');
     }
   };
+  
   
   return (
     <form onSubmit={handleSubmit}>
@@ -51,6 +53,8 @@ const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText 
 const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
   const dispatch = useDispatch();
   const maxDepth = 2; // Maximum nesting level for replies
+  const { user } = useSelector(state => state.auth);
+  const isAdmin = user?.role === 'admin';
   
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -97,36 +101,34 @@ const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
                 <small className="text-muted">{formattedDate}</small>
               </div>
             </div>
-            {(isAuthor || depth === 0) && (
-              <div className="dropdown">
-                <button className="btn btn-sm text-muted" type="button" id={`dropdownMenuButton-${comment.id}`} data-bs-toggle="dropdown" aria-expanded="false">
-                  <i className="fas fa-ellipsis-v"></i>
-                </button>
-                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${comment.id}`}>
-                  {depth < maxDepth && (
-                    <li>
-                      <button 
-                        className="dropdown-item" 
-                        onClick={() => setShowReplyForm(!showReplyForm)}
-                      >
-                        <i className="fas fa-reply me-2"></i> Reply
-                      </button>
-                    </li>
-                  )}
-                  {isAuthor && (
-                    <li>
-                      <button 
-                        className="dropdown-item text-danger" 
-                        onClick={() => setShowDeleteConfirm(true)}
-                      >
-                        <i className="fas fa-trash-alt me-2"></i> Delete
-                      </button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-          </div>
+  {depth < maxDepth && (
+    <div className="dropdown">
+      <button className="btn btn-sm text-muted" type="button" id={`dropdownMenuButton-${comment.id}`} data-bs-toggle="dropdown" aria-expanded="false">
+        <i className="fas fa-ellipsis-v"></i>
+      </button>
+      <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${comment.id}`}>
+        <li>
+          <button 
+            className="dropdown-item" 
+            onClick={() => setShowReplyForm(!showReplyForm)}
+          >
+            <i className="fas fa-reply me-2"></i> Reply
+          </button>
+        </li>
+        {isAdmin && ( // Add a check for admin role
+          <li>
+            <button 
+              className="dropdown-item text-danger" 
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <i className="fas fa-trash-alt me-2"></i> Delete
+            </button>
+          </li>
+        )}
+      </ul>
+    </div>
+  )}
+</div>
           
           <div className="comment-content mb-3">
             <p className="card-text mb-0">{comment.content}</p>

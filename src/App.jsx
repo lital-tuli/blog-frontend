@@ -31,23 +31,23 @@ function App() {
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           
-          {/* Protected Routes */}
-          <Route 
-            path="/articles/new" 
-            element={
-              <PrivateRoute>
-                <ArticleForm />
-              </PrivateRoute>
-            } 
-          />
-          <Route 
-            path="/articles/:id/edit" 
-            element={
-              <PrivateRoute>
-                <ArticleForm />
-              </PrivateRoute>
-            } 
-          />
+{/* Protected Routes */}
+<Route 
+  path="/articles/new" 
+  element={
+    <PrivateRoute requiresEditor={true}>
+      <ArticleForm />
+    </PrivateRoute>
+  } 
+/>
+<Route 
+  path="/articles/:id/edit" 
+  element={
+    <PrivateRoute requiresEditor={true}>
+      <ArticleForm />
+    </PrivateRoute>
+  } 
+/>
           <Route 
             path="/profile" 
             element={
