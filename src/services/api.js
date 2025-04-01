@@ -5,9 +5,8 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'X-CSRFToken': document.cookie.match(/csrftoken=([\w-]+)/)?.[1] || ''
   },
-  withCredentials: true //
+  withCredentials: true
 });
 
 api.interceptors.request.use(
@@ -130,10 +129,10 @@ api.interceptors.response.use(
   }
 );
 
-// Auth Service
 export const authService = {
   register: (userData) => api.post('auth/register/', userData),
-  login: (credentials) => api.post('token/', credentials), 
+  login: (credentials) => api.post('auth/token/', credentials), // Changed from 'token/' to 'auth/token/'
+  getUserDetails: () => api.get('auth/user/'),
   refreshToken: (refreshToken) => api.post('auth/token/refresh/', { refresh: refreshToken }),
   logout: () => {
     localStorage.removeItem('access_token');
