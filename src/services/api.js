@@ -1,15 +1,15 @@
 import axios from 'axios';
 
-// Create axios instance with correct base URL
 const api = axios.create({
   baseURL: 'http://localhost:8000/api/',
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+    'X-CSRFToken': document.cookie.match(/csrftoken=([\w-]+)/)?.[1] || ''
+  },
+  withCredentials: true //
 });
 
-// Add a request interceptor to attach the JWT token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -133,8 +133,7 @@ api.interceptors.response.use(
 // Auth Service
 export const authService = {
   register: (userData) => api.post('auth/register/', userData),
-  login: (credentials) => api.post('auth/token/', credentials),
-  getUserDetails: () => api.get('auth/user/'),
+  login: (credentials) => api.post('token/', credentials), 
   refreshToken: (refreshToken) => api.post('auth/token/refresh/', { refresh: refreshToken }),
   logout: () => {
     localStorage.removeItem('access_token');

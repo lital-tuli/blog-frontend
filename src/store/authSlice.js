@@ -11,12 +11,20 @@ const initialState = {
 };
 
 // Async thunks
+// In authSlice.js
 export const registerUser = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await authService.register(userData);
+      // Rename confirmPassword to password2 if needed
+      const apiData = {
+        ...userData,
+        password2: userData.confirmPassword || userData.password
+      };
+      delete apiData.confirmPassword; // Remove if using password2
       
+      const response = await authService.register(apiData);
+   
       // Save tokens
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
@@ -24,12 +32,14 @@ export const registerUser = createAsyncThunk(
       // Save user info
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
-      return response.data;
+      return {
+        user: response.data.user,
+        access: response.data.access,
+        refresh: response.data.refresh
+      };
     } catch (error) {
-      // More detailed error handling
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
+        
         return rejectWithValue(error.response.data);
       } else if (error.request) {
         // The request was made but no response was received
@@ -38,6 +48,9 @@ export const registerUser = createAsyncThunk(
         });
       } else {
         // Something happened in setting up the request that triggered an Error
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
         return rejectWithValue({ 
           message: 'Error during request setup: ' + error.message 
         });
