@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/',
+  baseURL: 'http://localhost:8000/',  
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
         
-        const response = await api.post('auth/token/refresh/', { refresh: refreshToken });
+        const response = await api.post('api/auth/token/refresh/', { refresh: refreshToken });
         const newToken = response.data.access;
         
         // Store the new token
@@ -130,10 +130,10 @@ api.interceptors.response.use(
 );
 
 export const authService = {
-  register: (userData) => api.post('auth/register/', userData),
-  login: (credentials) => api.post('auth/token/', credentials),
-  getUserDetails: () => api.get('auth/user/'),
-  refreshToken: (refreshToken) => api.post('auth/token/refresh/', { refresh: refreshToken }),
+  register: (userData) => api.post('api/auth/register/', userData),
+  login: (credentials) => api.post('api/auth/token/', credentials),
+  getUserDetails: () => api.get('api/auth/user/'),
+  refreshToken: (refreshToken) => api.post('api/auth/token/refresh/', { refresh: refreshToken }),
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -143,35 +143,45 @@ export const authService = {
 
 // Articles Service
 export const articlesService = {
-  getAll: (params) => api.get('articles/', { params }),
-  getById: (id) => api.get(`articles/${id}/`),
-  create: (articleData) => api.post('articles/', articleData),
-  update: (id, articleData) => api.put(`articles/${id}/`, articleData),
-  delete: (id) => api.delete(`articles/${id}/`),
-  getComments: (id) => api.get(`articles/${id}/comments/`),
-  getPopular: () => api.get('articles/popular/')
+  getAll: (params) => api.get('api/articles/', { params }),
+  getById: (id) => api.get(`api/articles/${id}/`),
+  create: (articleData) => api.post('api/articles/', articleData),
+  update: (id, articleData) => api.put(`api/articles/${id}/`, articleData),
+  delete: (id) => api.delete(`api/articles/${id}/`),
+  getComments: (id) => api.get(`api/articles/${id}/comments/`),
+  getPopular: () => api.get('api/articles/popular/')
 };
 
 // Comments Service
 export const commentsService = {
-  create: (articleId, commentData) => api.post(`articles/${articleId}/comments/`, commentData),
-  reply: (commentId, replyData) => api.post(`comments/${commentId}/reply/`, replyData),
-  delete: (id) => api.delete(`comments/${id}/`),
-  update: (id, commentData) => api.put(`comments/${id}/`, commentData)
+  create: (commentData) => api.post(`api/articles/${commentData.article}/comments/`, commentData),
+  reply: (commentId, replyData) => api.post(`api/comments/${commentId}/reply/`, replyData),
+  delete: (id) => api.delete(`api/comments/${id}/`),
+  update: (id, commentData) => api.put(`api/comments/${id}/`, commentData)
 };
 
 // User Profile Service
 export const profileService = {
-  getProfile: (id) => api.get(`auth/profile/${id}/`),
-  getCurrentUserProfile: () => api.get('auth/profile/'),
+  getProfile: (id) => {
+    // Validate ID before making request
+    if (!id || isNaN(id)) {
+      return Promise.reject(new Error('Invalid profile ID'));
+    }
+    return api.get(`api/auth/profile/${id}/`);
+  },
+  getCurrentUserProfile: () => api.get('api/auth/profile/'),
   updateProfile: (id, profileData) => {
-    // For FormData with files, we need to change the content type
+    // Validate ID before making request
+    if (!id || isNaN(id)) {
+      return Promise.reject(new Error('Invalid profile ID'));
+    }
+
     const headers = profileData instanceof FormData 
       ? { 'Content-Type': 'multipart/form-data' } 
       : {};
     
-      return api.put(`auth/profile/${id}/`, profileData, { headers });
-    }
+    return api.put(`auth/profile/${id}/`, profileData, { headers });
+  }
 };
 
 export default api;

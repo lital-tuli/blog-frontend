@@ -1,4 +1,3 @@
-// src/pages/ProfilePage.jsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,6 +6,7 @@ import * as Yup from 'yup';
 import { fetchCurrentUserProfile, fetchProfile, updateProfile, clearError } from '../store/profileSlice';
 import { fetchArticles } from '../store/articlesSlice';
 import ArticleCard from '../components/articles/ArticleCard';
+import { useToastContext } from '../context/ToastContext';
 
 // Validation schema for profile update
 const ProfileSchema = Yup.object().shape({
@@ -21,6 +21,8 @@ const ProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { showSuccess, showError } = useToastContext();
+  
   const { profile, isLoading: profileLoading, error: profileError } = useSelector(state => state.profile);
   const { articles, isLoading: articlesLoading } = useSelector(state => state.articles);
   const { user, isAuthenticated } = useSelector(state => state.auth);
@@ -37,10 +39,20 @@ const ProfilePage = () => {
     dispatch(clearError());
     
     // Load profile based on ID or current user
-    if (isCurrentUser) {
+    if (!id || id === 'undefined') {
+      // If no ID or ID is 'undefined', fetch current user's profile
       dispatch(fetchCurrentUserProfile());
-    } else if (id) {
-      dispatch(fetchProfile(id));
+    } else {
+      // Ensure id is a valid number before dispatching
+      const userId = parseInt(id, 10);
+      if (!isNaN(userId)) {
+        dispatch(fetchProfile(userId));
+      } else {
+        // Handle invalid ID scenario
+        dispatch(clearError());
+        showError('Invalid profile ID');
+        navigate('/');
+      }
     }
     
     // Load user's articles
@@ -49,7 +61,7 @@ const ProfilePage = () => {
     } else if (user) {
       dispatch(fetchArticles({ author: user.id }));
     }
-  }, [dispatch, id, user, isCurrentUser]);
+  }, [dispatch, id, user, navigate, showError]);
   
   const handleImageChange = (event) => {
     if (event.target.files && event.target.files[0]) {
@@ -82,20 +94,36 @@ const ProfilePage = () => {
     }
     
     // Dispatch update action
-    dispatch(updateProfile({ profileId: profile.id, profileData: formData }))
+    dispatch(updateProfile({ profileId: profile.id || user.id, profileData: formData }))
       .unwrap()
       .then(() => {
+        // Reset state
         setIsEditMode(false);
         setUploadedImage(null);
         setPreviewUrl(null);
+        
+        // Show success message
+        showSuccess('Profile updated successfully');
+        
+        // Redirect to profile page
+        navigate(`/profile/${profile.user}`);
       })
       .catch(error => {
         console.error('Failed to update profile:', error);
+        
+        // Show error message
+        if (error.response?.data) {
+          const messages = Object.values(error.response.data).flat();
+          showError(messages.join(' '));
+        } else {
+          showError(error.message || 'Failed to update profile');
+        }
       })
       .finally(() => {
         setSubmitting(false);
       });
   };
+  
   
   if (profileLoading && !profile) {
     return (

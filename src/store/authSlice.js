@@ -11,17 +11,20 @@ const initialState = {
 };
 
 // Async thunks
-// In authSlice.js
 export const registerUser = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      // Rename confirmPassword to password2 if needed
+      // Rename confirmPassword to password2 for Django REST framework
       const apiData = {
         ...userData,
-        password2: userData.confirmPassword || userData.password
+        password2: userData.confirmPassword || userData.password2 || userData.password
       };
-      delete apiData.confirmPassword; // Remove if using password2
+      
+      // Remove confirmPassword if it exists
+      if (apiData.confirmPassword) {
+        delete apiData.confirmPassword;
+      }
       
       const response = await authService.register(apiData);
    
@@ -39,7 +42,6 @@ export const registerUser = createAsyncThunk(
       };
     } catch (error) {
       if (error.response) {
-        
         return rejectWithValue(error.response.data);
       } else if (error.request) {
         // The request was made but no response was received

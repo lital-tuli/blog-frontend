@@ -7,21 +7,6 @@ const initialState = {
   error: null
 };
 
-// Async thunks
-export const fetchProfile = createAsyncThunk(
-  'profile/fetch',
-  async (profileId, { rejectWithValue }) => {
-    try {
-      const response = await profileService.getProfile(profileId);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch profile' }
-      );
-    }
-  }
-);
-
 export const fetchCurrentUserProfile = createAsyncThunk(
   'profile/fetchCurrent',
   async (_, { rejectWithValue }) => {
@@ -36,12 +21,34 @@ export const fetchCurrentUserProfile = createAsyncThunk(
   }
 );
 
+export const fetchProfile = createAsyncThunk(
+  'profile/fetch',
+  async (profileId, { rejectWithValue }) => {
+    try {
+      // Validate profileId
+      if (!profileId || isNaN(profileId)) {
+        return rejectWithValue({ message: 'Invalid profile ID' });
+      }
+      const response = await profileService.getProfile(profileId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: 'Failed to fetch profile' }
+      );
+    }
+  }
+);
+
 export const updateProfile = createAsyncThunk(
   'profile/update',
   async ({ profileId, profileData }, { rejectWithValue }) => {
     try {
       const response = await profileService.updateProfile(profileId, profileData);
-      return response.data;
+      
+      return {
+        ...response.data,
+        userId: profileId  // or extract from response if available
+      };
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: 'Failed to update profile' }
@@ -50,7 +57,6 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
-// Profile slice
 const profileSlice = createSlice({
   name: 'profile',
   initialState,
@@ -64,21 +70,7 @@ const profileSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch profile
-      .addCase(fetchProfile.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchProfile.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.profile = action.payload;
-      })
-      .addCase(fetchProfile.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      })
-      
-      // Fetch current user profile
+      // Fetch current user profile cases
       .addCase(fetchCurrentUserProfile.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -92,7 +84,21 @@ const profileSlice = createSlice({
         state.error = action.payload;
       })
       
-      // Update profile
+      // Fetch specific profile cases
+      .addCase(fetchProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.profile = action.payload;
+      })
+      .addCase(fetchProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      
+      // Update profile cases
       .addCase(updateProfile.pending, (state) => {
         state.isLoading = true;
         state.error = null;
