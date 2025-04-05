@@ -70,7 +70,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
         
-        const response = await api.post('api/auth/token/refresh/', { refresh: refreshToken });
+        const response = await api.post('api/token/refresh/', { refresh: refreshToken });
         const newToken = response.data.access;
         
         // Store the new token
@@ -101,7 +101,6 @@ api.interceptors.response.use(
       }
     }
     
-    // Enhance error with user-friendly messages based on status code
     if (error.response) {
       switch (error.response.status) {
         case 400:
@@ -130,10 +129,10 @@ api.interceptors.response.use(
 );
 
 export const authService = {
-  register: (userData) => api.post('api/auth/register/', userData),
-  login: (credentials) => api.post('api/auth/token/', credentials),
-  getUserDetails: () => api.get('api/auth/user/'),
-  refreshToken: (refreshToken) => api.post('api/auth/token/refresh/', { refresh: refreshToken }),
+  register: (userData) => api.post('api/register/', userData),
+  login: (credentials) => api.post('api/token/', credentials),
+  getUserDetails: () => api.get('api/user/'),
+  refreshToken: (refreshToken) => api.post('api/token/refresh/', { refresh: refreshToken }),
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -160,16 +159,16 @@ export const commentsService = {
   update: (id, commentData) => api.put(`api/comments/${id}/`, commentData)
 };
 
-// User Profile Service
+// User Profile Service - updated paths
 export const profileService = {
   getProfile: (id) => {
     // Validate ID before making request
     if (!id || isNaN(id)) {
       return Promise.reject(new Error('Invalid profile ID'));
     }
-    return api.get(`api/auth/profile/${id}/`);
+    return api.get(`api/profile/${id}/`);
   },
-  getCurrentUserProfile: () => api.get('api/auth/profile/'),
+  getCurrentUserProfile: () => api.get('api/profile/'),
   updateProfile: (id, profileData) => {
     // Validate ID before making request
     if (!id || isNaN(id)) {
@@ -180,7 +179,7 @@ export const profileService = {
       ? { 'Content-Type': 'multipart/form-data' } 
       : {};
     
-    return api.put(`auth/profile/${id}/`, profileData, { headers });
+    return api.put(`api/profile/${id}/`, profileData, { headers });
   }
 };
 

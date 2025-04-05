@@ -40,6 +40,8 @@ export const registerUser = createAsyncThunk(
         access: response.data.access,
         refresh: response.data.refresh
       };
+ 
+
     } catch (error) {
       if (error.response) {
         return rejectWithValue(error.response.data);
@@ -65,7 +67,6 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-      // Get tokens from login endpoint
       const response = await authService.login(credentials);
       
       // Save tokens
@@ -74,6 +75,7 @@ export const loginUser = createAsyncThunk(
       
       // Fetch user details with the token
       try {
+        // Updated: api/user/ instead of api/auth/user/
         const userResponse = await authService.getUserDetails();
         const userData = userResponse.data;
         
@@ -84,19 +86,8 @@ export const loginUser = createAsyncThunk(
           access: response.data.access,
           refresh: response.data.refresh
         };
-      } catch (userError) {
-        // If user details can't be fetched, create basic user object from token
-        const userData = {
-          username: credentials.username
-        };
-        
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        return {
-          user: userData,
-          access: response.data.access,
-          refresh: response.data.refresh
-        };
+      } catch (error) {
+        throw error;
       }
     } catch (error) {
       // More detailed error handling

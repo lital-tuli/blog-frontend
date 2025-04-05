@@ -48,21 +48,26 @@ const ArticleForm = () => {
   }, [dispatch, id]);
   
   const handleSubmit = (values, { setSubmitting }) => {
-    // Convert tags string to array
+    console.log('Form Submit Values:', values);
+    
     const formattedValues = {
       ...values,
       tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : []
     };
     
+    console.log('Formatted Values:', formattedValues);
+    
     const action = isEditMode
       ? updateArticle({ id, articleData: formattedValues })
       : createArticle(formattedValues);
     
+    console.log('Dispatching Action:', action);
+    
     dispatch(action)
       .unwrap()
       .then((result) => {
+        console.log('Article Creation Result:', result);
         setSubmitting(false);
-        // Redirect to the article detail page
         navigate(`/articles/${result.id}`);
       })
       .catch((err) => {
