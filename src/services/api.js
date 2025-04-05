@@ -23,7 +23,7 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle token refresh
+// Add these flags to manage token refresh state
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -44,10 +44,19 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only try to refresh if we get a 401 (unauthorized) response, 
+    // the error is specifically about an expired token,
+    // and we haven't already tried to refresh for this request
+    if (
+      error.response?.status === 401 && 
+      error.response?.data?.code === 'token_not_valid' &&
+      !originalRequest._retry
+    ) {
+      // Mark this request as retried so we don't retry it again
+      originalRequest._retry = true;
+      
+      // If we're already refreshing, add this request to the queue
       if (isRefreshing) {
-        // If we're already refreshing, add this request to the queue
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -55,34 +64,41 @@ api.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return api(originalRequest);
           })
-          .catch(err => {
-            return Promise.reject(err);
-          });
+          .catch(err => Promise.reject(err));
       }
-
-      originalRequest._retry = true;
+      
       isRefreshing = true;
       
       try {
-        // Try to refresh token without using store dispatch
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
         
-        const response = await api.post('api/token/refresh/', { refresh: refreshToken });
+        console.log('Attempting to refresh token...');
+        
+        // Make the refresh request directly with axios instead of using the intercepted client
+        const response = await axios.post('http://localhost:8000/api/token/refresh/', {
+          refresh: refreshToken
+        });
+        
         const newToken = response.data.access;
+        console.log('Token refreshed successfully');
         
         // Store the new token
         localStorage.setItem('access_token', newToken);
         
-        // Process the queue
+        // Update authorization header for the original request
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        
+        // Process any requests that were waiting for the token refresh
         processQueue(null, newToken);
         
-        // Retry the original request
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        // Retry the original request with the new token
         return api(originalRequest);
       } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        
         // If refresh fails, clear tokens and process queue with error
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
