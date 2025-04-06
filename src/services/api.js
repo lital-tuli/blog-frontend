@@ -1,7 +1,233 @@
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+// Base query with auth handling
+const baseQuery = fetchBaseQuery({
+  baseUrl: 'http://localhost:8000/api/',
+  prepareHeaders: (headers, { getState }) => {
+    const token = localStorage.getItem('access_token');
+    
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    return headers;
+  },
+  credentials: 'include',
+});
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+  
+  // If we get a 401, try to refresh the token
+  if (result?.error?.status === 401) {
+    // Try to get a new token
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      // No refresh token available, user needs to login again
+      return result;
+    }
+    
+    const refreshResult = await baseQuery(
+      { 
+        url: 'token/refresh/', 
+        method: 'POST',
+        body: { refresh: refreshToken } 
+      },
+      api,
+      extraOptions
+    );
+    
+    if (refreshResult?.data) {
+      // Store the new token
+      localStorage.setItem('access_token', refreshResult.data.access);
+      
+      // Retry the original request
+      result = await baseQuery(args, api, extraOptions);
+    } else {
+      // Refresh failed - logout user
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      
+      // Dispatch logout
+      api.dispatch({ type: 'auth/logout' });
+    }
+  }
+  
+  return result;
+};
+
+// Define our API service
+export const blogApi = createApi({
+  reducerPath: 'blogApi',
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ['Articles', 'Article', 'Comments', 'Profile', 'Users'],
+  endpoints: (builder) => ({
+    // Authentication endpoints
+    login: builder.mutation({
+      query: (credentials) => ({
+        url: 'token/',
+        method: 'POST',
+        body: credentials,
+      }),
+    }),
+    
+    register: builder.mutation({
+      query: (userData) => ({
+        url: 'register/',
+        method: 'POST',
+        body: userData,
+      }),
+    }),
+    
+    refreshToken: builder.mutation({
+      query: (refreshToken) => ({
+        url: 'token/refresh/',
+        method: 'POST',
+        body: { refresh: refreshToken },
+      }),
+    }),
+    
+    // User endpoints
+    getCurrentUser: builder.query({
+      query: () => 'user/',
+      providesTags: ['Users'],
+    }),
+    
+    // Article endpoints
+    getArticles: builder.query({
+      query: (params) => ({
+        url: 'articles/',
+        params,
+      }),
+      providesTags: (result) => 
+        result
+          ? [
+              ...result.results.map(({ id }) => ({ type: 'Articles', id })),
+              { type: 'Articles', id: 'LIST' },
+            ]
+          : [{ type: 'Articles', id: 'LIST' }],
+    }),
+    
+    getArticleById: builder.query({
+      query: (id) => `articles/${id}/`,
+      providesTags: (result, error, id) => [{ type: 'Article', id }],
+    }),
+    
+    createArticle: builder.mutation({
+      query: (articleData) => ({
+        url: 'articles/',
+        method: 'POST',
+        body: articleData,
+      }),
+      invalidatesTags: [{ type: 'Articles', id: 'LIST' }],
+    }),
+    
+    updateArticle: builder.mutation({
+      query: ({ id, ...articleData }) => ({
+        url: `articles/${id}/`,
+        method: 'PUT',
+        body: articleData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Articles', id: 'LIST' },
+        { type: 'Article', id },
+      ],
+    }),
+    
+    deleteArticle: builder.mutation({
+      query: (id) => ({
+        url: `articles/${id}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Articles', id: 'LIST' }],
+    }),
+    
+    getPopularArticles: builder.query({
+      query: () => 'articles/popular/',
+      providesTags: [{ type: 'Articles', id: 'POPULAR' }],
+    }),
+    
+    // Comment endpoints
+    getArticleComments: builder.query({
+      query: (articleId) => `articles/${articleId}/comments/`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'Comments', id })),
+              { type: 'Comments', id: 'LIST' },
+            ]
+          : [{ type: 'Comments', id: 'LIST' }],
+    }),
+    
+    addComment: builder.mutation({
+      query: ({ articleId, ...commentData }) => ({
+        url: `articles/${articleId}/comments/`,
+        method: 'POST',
+        body: commentData,
+      }),
+      invalidatesTags: [{ type: 'Comments', id: 'LIST' }],
+    }),
+    
+    deleteComment: builder.mutation({
+      query: (id) => ({
+        url: `comments/${id}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Comments', id: 'LIST' }],
+    }),
+    
+    // Profile endpoints
+    getUserProfile: builder.query({
+      query: (userId) => `profile/${userId || ''}`,
+      providesTags: (result, error, userId) => [{ type: 'Profile', id: userId || 'CURRENT' }],
+    }),
+    
+    updateProfile: builder.mutation({
+      query: ({ userId, ...profileData }) => ({
+        url: `profile/${userId || ''}`,
+        method: 'PUT',
+        body: profileData,
+      }),
+      invalidatesTags: (result, error, { userId }) => [{ type: 'Profile', id: userId || 'CURRENT' }],
+    }),
+  }),
+});
+
+// Export hooks
+export const {
+  // Auth hooks
+  useLoginMutation,
+  useRegisterMutation,
+  useRefreshTokenMutation,
+  
+  // User hooks
+  useGetCurrentUserQuery,
+  
+  // Article hooks
+  useGetArticlesQuery,
+  useGetArticleByIdQuery,
+  useCreateArticleMutation,
+  useUpdateArticleMutation,
+  useDeleteArticleMutation,
+  useGetPopularArticlesQuery,
+  
+  // Comment hooks
+  useGetArticleCommentsQuery,
+  useAddCommentMutation,
+  useDeleteCommentMutation,
+  
+  // Profile hooks
+  useGetUserProfileQuery,
+  useUpdateProfileMutation,
+} = blogApi;
+
+// Export the original axios instance for any custom calls
 import axios from 'axios';
 
+// Create axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:8000/',  
+  baseURL: 'http://localhost:8000/api/',  
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -9,17 +235,7 @@ const api = axios.create({
   withCredentials: true
 });
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (typeof window !== 'undefined') {
-      // Dispatch through window event
-      window.dispatchEvent(new CustomEvent('auth-logout'));
-    }
-    return Promise.reject(error);
-  }
-);
-
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -34,51 +250,14 @@ api.interceptors.request.use(
   }
 );
 
-// Add these flags to manage token refresh state
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  
-  failedQueue = [];
-};
-
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // Only try to refresh if we get a 401 (unauthorized) response, 
-    // the error is specifically about an expired token,
-    // and we haven't already tried to refresh for this request
-    if (
-      error.response?.status === 401 && 
-      error.response?.data?.code === 'token_not_valid' &&
-      !originalRequest._retry
-    ) {
-      // Mark this request as retried so we don't retry it again
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
-      // If we're already refreshing, add this request to the queue
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(token => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
-          .catch(err => Promise.reject(err));
-      }
-      
-      isRefreshing = true;
       
       try {
         const refreshToken = localStorage.getItem('refresh_token');
@@ -86,80 +265,35 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
         
-        console.log('Attempting to refresh token...');
-        
-        // Make the refresh request directly with axios instead of using the intercepted client
         const response = await axios.post('http://localhost:8000/api/token/refresh/', {
           refresh: refreshToken
         });
         
         const newToken = response.data.access;
-        console.log('Token refreshed successfully');
-        
-        // Store the new token
         localStorage.setItem('access_token', newToken);
         
-        // Update authorization header for the original request
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        
-        // Process any requests that were waiting for the token refresh
-        processQueue(null, newToken);
-        
-        // Retry the original request with the new token
         return api(originalRequest);
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
-        
-        // If refresh fails, clear tokens and process queue with error
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        
-        processQueue(refreshError);
-        
-        // Import necessary for logout without circular dependency
-        const { store } = require('../store');
-        const { logout } = require('../store/authSlice');
-        store.dispatch(logout());
-        
+        window.dispatchEvent(new CustomEvent('auth-logout'));
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
-    }
-    
-    if (error.response) {
-      switch (error.response.status) {
-        case 400:
-          error.userMessage = 'Invalid request. Please check your input.';
-          break;
-        case 403:
-          error.userMessage = 'You do not have permission to perform this action.';
-          break;
-        case 404:
-          error.userMessage = 'The requested resource was not found.';
-          break;
-        case 500:
-          error.userMessage = 'Server error. Please try again later.';
-          break;
-        default:
-          error.userMessage = 'An error occurred. Please try again.';
-      }
-    } else if (error.request) {
-      error.userMessage = 'No response from server. Please check your connection.';
-    } else {
-      error.userMessage = 'Request error. Please try again.';
     }
     
     return Promise.reject(error);
   }
 );
 
+// Legacy service exports for backward compatibility
 export const authService = {
-  register: (userData) => api.post('api/register/', userData),
-  login: (credentials) => api.post('api/token/', credentials),
-  getUserDetails: () => api.get('api/user/'),
-  refreshToken: (refreshToken) => api.post('api/token/refresh/', { refresh: refreshToken }),
+  register: (userData) => api.post('register/', userData),
+  login: (credentials) => api.post('token/', credentials),
+  getUserDetails: () => api.get('user/'),
+  refreshToken: (refreshToken) => api.post('token/refresh/', { refresh: refreshToken }),
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -169,33 +303,33 @@ export const authService = {
 
 // Articles Service
 export const articlesService = {
-  getAll: (params) => api.get('api/articles/', { params }),
-  getById: (id) => api.get(`api/articles/${id}/`),
-  create: (articleData) => api.post('api/articles/', articleData),
-  update: (id, articleData) => api.put(`api/articles/${id}/`, articleData),
-  delete: (id) => api.delete(`api/articles/${id}/`),
-  getComments: (id) => api.get(`api/articles/${id}/comments/`),
-  getPopular: () => api.get('api/articles/popular/')
+  getAll: (params) => api.get('articles/', { params }),
+  getById: (id) => api.get(`articles/${id}/`),
+  create: (articleData) => api.post('articles/', articleData),
+  update: (id, articleData) => api.put(`articles/${id}/`, articleData),
+  delete: (id) => api.delete(`articles/${id}/`),
+  getComments: (id) => api.get(`articles/${id}/comments/`),
+  getPopular: () => api.get('articles/popular/')
 };
 
 // Comments Service
 export const commentsService = {
-  create: (commentData) => api.post(`api/articles/${commentData.article}/comments/`, commentData),
-  reply: (commentId, replyData) => api.post(`api/comments/${commentId}/reply/`, replyData),
-  delete: (id) => api.delete(`api/comments/${id}/`),
-  update: (id, commentData) => api.put(`api/comments/${id}/`, commentData)
+  create: (commentData) => api.post(`articles/${commentData.article}/comments/`, commentData),
+  reply: (commentId, replyData) => api.post(`comments/${commentId}/reply/`, replyData),
+  delete: (id) => api.delete(`comments/${id}/`),
+  update: (id, commentData) => api.put(`comments/${id}/`, commentData)
 };
 
-// User Profile Service - updated paths
+// User Profile Service
 export const profileService = {
   getProfile: (id) => {
     // Validate ID before making request
     if (!id || isNaN(id)) {
       return Promise.reject(new Error('Invalid profile ID'));
     }
-    return api.get(`api/profile/${id}/`);
+    return api.get(`profile/${id}/`);
   },
-  getCurrentUserProfile: () => api.get('api/profile/'),
+  getCurrentUserProfile: () => api.get('profile/'),
   updateProfile: (id, profileData) => {
     // Validate ID before making request
     if (!id || isNaN(id)) {
@@ -206,7 +340,7 @@ export const profileService = {
       ? { 'Content-Type': 'multipart/form-data' } 
       : {};
     
-    return api.put(`api/profile/${id}/`, profileData, { headers });
+    return api.put(`profile/${id}/`, profileData, { headers });
   }
 };
 
