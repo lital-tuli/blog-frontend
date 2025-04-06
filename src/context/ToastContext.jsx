@@ -1,12 +1,11 @@
-// src/contexts/ToastContext.js
 import React, { createContext, useContext, useState } from 'react';
-import { Toast } from '../components/Toast';
+import Toast from '../components/common/Toast'; // Fixed import path
 
 // Create context
 const ToastContext = createContext();
 
 // Custom hook to use the toast context
-export const useToast = () => {
+export const useToastContext = () => {
   const context = useContext(ToastContext);
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
@@ -45,21 +44,21 @@ export const ToastProvider = ({ children }) => {
   };
 
   // Convenience methods for different toast types
-  const success = (message, duration) => showToast(message, TOAST_TYPES.SUCCESS, duration);
-  const error = (message, duration) => showToast(message, TOAST_TYPES.ERROR, duration);
-  const info = (message, duration) => showToast(message, TOAST_TYPES.INFO, duration);
-  const warning = (message, duration) => showToast(message, TOAST_TYPES.WARNING, duration);
+  const showSuccess = (message, duration) => showToast(message, TOAST_TYPES.SUCCESS, duration);
+  const showError = (message, duration) => showToast(message, TOAST_TYPES.ERROR, duration);
+  const showInfo = (message, duration) => showToast(message, TOAST_TYPES.INFO, duration);
+  const showWarning = (message, duration) => showToast(message, TOAST_TYPES.WARNING, duration);
 
   return (
-    <ToastContext.Provider value={{ showToast, removeToast, success, error, info, warning }}>
+    <ToastContext.Provider value={{ showToast, removeToast, showSuccess, showError, showInfo, showWarning }}>
       {children}
       <div className="toast-container">
         {toasts.map((toast) => (
           <Toast
             key={toast.id}
-            id={toast.id}
-            message={toast.message}
             type={toast.type}
+            message={toast.message}
+            show={true}
             onClose={() => removeToast(toast.id)}
           />
         ))}
