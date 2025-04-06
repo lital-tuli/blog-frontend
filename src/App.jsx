@@ -16,9 +16,24 @@ import ProfilePage from './pages/ProfilePage'
 
 // Common Components
 import PrivateRoute from './components/common/PrivateRoute'
+import { ToastProvider } from './context/ToastContext';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { logout } from './store/authSlice';
 
 function App() {
-  return (
+  const dispatch = useDispatch();
+
+useEffect(() => {
+  const handleLogout = () => {
+    dispatch(logout());
+  };
+  window.addEventListener('auth-logout', handleLogout);
+  return () => window.removeEventListener('auth-logout', handleLogout);
+}, [dispatch]);
+
+return (
+  <ToastProvider>
     <div className="App">
       <Navbar />
       <main className="main-content">
@@ -31,23 +46,23 @@ function App() {
           <Route path="/articles/:id" element={<ArticleDetailPage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           
-{/* Protected Routes */}
-<Route 
-  path="/articles/new" 
-  element={
-    <PrivateRoute requiresEditor={true}>
-      <ArticleForm />
-    </PrivateRoute>
-  } 
-/>
-<Route 
-  path="/articles/:id/edit" 
-  element={
-    <PrivateRoute requiresEditor={true}>
-      <ArticleForm />
-    </PrivateRoute>
-  } 
-/>
+          {/* Protected Routes */}
+          <Route 
+            path="/articles/new" 
+            element={
+              <PrivateRoute requiresEditor={true}>
+                <ArticleForm />
+              </PrivateRoute>
+            } 
+          />
+          <Route 
+            path="/articles/:id/edit" 
+            element={
+              <PrivateRoute requiresEditor={true}>
+                <ArticleForm />
+              </PrivateRoute>
+            } 
+          />
           <Route 
             path="/profile" 
             element={
@@ -62,7 +77,8 @@ function App() {
         </Routes>
       </main>
     </div>
-  )
+  </ToastProvider>
+)
 }
 
 export default App

@@ -9,6 +9,17 @@ const api = axios.create({
   withCredentials: true
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (typeof window !== 'undefined') {
+      // Dispatch through window event
+      window.dispatchEvent(new CustomEvent('auth-logout'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');

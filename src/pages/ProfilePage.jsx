@@ -16,7 +16,6 @@ const ProfileSchema = Yup.object().shape({
     .nullable()
     .transform((value) => (value === '' ? null : value))
 });
-
 const ProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();

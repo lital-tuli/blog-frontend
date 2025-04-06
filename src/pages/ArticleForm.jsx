@@ -102,16 +102,32 @@ const ArticleForm = () => {
     );
   }
   
-  if (isEditMode && error) {
-    return (
-      <div className="container py-5">
-        <div className="alert alert-danger d-flex align-items-center" role="alert">
-          <i className="fas fa-exclamation-circle me-2"></i>
-          <div>{error.message || 'Error loading article'}</div>
-        </div>
+if (isEditMode && error) {
+  return (
+    <div className="container py-5">
+      <div className="alert alert-danger d-flex align-items-center" role="alert">
+        <i className="fas fa-exclamation-circle me-2"></i>
+        <div>{error.message || 'Error loading article'}</div>
       </div>
-    );
+    </div>
+  );
+}
+
+const [imagePreview, setImagePreview] = useState(null);
+
+const handleImageChange = (event, setFieldValue) => {
+  const file = event.currentTarget.files[0];
+  if (file) {
+    setFieldValue('image', file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   }
+};
   
   return (
     <div className="bg-light py-5">
@@ -177,33 +193,43 @@ const ArticleForm = () => {
                       </ul>
 
                       {previewMode ? (
-                        /* Preview Mode */
-                        <div className="article-preview">
-                          <div className="border p-4 rounded bg-white mb-4">
-                            <h1 className="mb-3">{values.title || 'Untitled Article'}</h1>
-                            <div className="mb-4">
-                              {values.tags && values.tags.split(',').map((tag, index) => (
-                                <span key={index} className="badge bg-light text-secondary me-2 mb-2">
-                                  <i className="fas fa-tag me-1"></i> {tag.trim()}
-                                </span>
-                              ))}
-                            </div>
-                            <div className="article-content">
-                              {values.content ? 
-                                values.content.split('\n').map((paragraph, index) => (
-                                  paragraph ? 
-                                    <p key={index} className="mb-3">{paragraph}</p> : 
-                                    <br key={index} />
-                                )) : 
-                                <p className="text-muted fst-italic">No content yet...</p>
-                              }
-                            </div>
-                            <div className="mt-3 p-2 bg-light rounded small">
-                              <i className="fas fa-info-circle me-1 text-primary"></i>
-                              Status: <span className="fw-bold">{values.status.charAt(0).toUpperCase() + values.status.slice(1)}</span>
-                            </div>
-                          </div>
-                        </div>
+/* Preview Mode */
+<div className="article-preview">
+  <div className="border p-4 rounded bg-white mb-4">
+    <h1 className="mb-3">{values.title || 'Untitled Article'}</h1>
+    <div className="mb-4">
+      {values.tags && values.tags.split(',').map((tag, index) => (
+        <span key={index} className="badge bg-light text-secondary me-2 mb-2">
+          <i className="fas fa-tag me-1"></i> {tag.trim()}
+        </span>
+      ))}
+    </div>
+    {imagePreview && (
+      <div className="mb-4">
+        <img 
+          src={imagePreview} 
+          alt="Featured" 
+          className="img-fluid rounded" 
+          style={{ maxHeight: '300px' }}
+        />
+      </div>
+    )}
+    <div className="article-content">
+      {values.content ? 
+        values.content.split('\n').map((paragraph, index) => (
+          paragraph ? 
+            <p key={index} className="mb-3">{paragraph}</p> : 
+            <br key={index} />
+        )) : 
+        <p className="text-muted fst-italic">No content yet...</p>
+      }
+    </div>
+    <div className="mt-3 p-2 bg-light rounded small">
+      <i className="fas fa-info-circle me-1 text-primary"></i>
+      Status: <span className="fw-bold">{values.status.charAt(0).toUpperCase() + values.status.slice(1)}</span>
+    </div>
+  </div>
+</div>
                       ) : (
                         /* Edit Mode */
                         <>

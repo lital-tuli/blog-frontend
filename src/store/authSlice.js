@@ -12,7 +12,7 @@ const initialState = {
 
 // Async thunks
 export const registerUser = createAsyncThunk(
-  'auth/register',
+  'api/register',
   async (userData, { rejectWithValue }) => {
     try {
       // Rename confirmPassword to password2 for Django REST framework
@@ -67,7 +67,7 @@ export const registerUser = createAsyncThunk(
 );
 
 export const loginUser = createAsyncThunk(
-  'auth/login',
+  'api/token/',
   async (credentials, { rejectWithValue }) => {
     try {
       console.log('Attempting login with username:', credentials.username);
