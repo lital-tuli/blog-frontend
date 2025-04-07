@@ -70,7 +70,7 @@ export const blogApi = createApi({
     // Authentication endpoints
     login: builder.mutation({
       query: (credentials) => ({
-        url: 'login/',  // Updated to match Django endpoint
+        url: 'login/',
         method: 'POST',
         body: credentials,
       }),
@@ -177,6 +177,15 @@ export const blogApi = createApi({
       invalidatesTags: [{ type: 'Comments', id: 'LIST' }],
     }),
     
+    updateComment: builder.mutation({
+      query: ({ commentId, ...commentData }) => ({
+        url: `comments/${commentId}/`,
+        method: 'PATCH',
+        body: commentData,
+      }),
+      invalidatesTags: [{ type: 'Comments', id: 'LIST' }],
+    }),
+    
     deleteComment: builder.mutation({
       query: (id) => ({
         url: `comments/${id}/`,
@@ -223,6 +232,7 @@ export const {
   useDeleteArticleMutation,
   useGetArticleCommentsQuery,
   useAddCommentMutation,
+  useUpdateCommentMutation,
   useDeleteCommentMutation,
   useGetUserProfileQuery,
   useUpdateProfileMutation,
@@ -295,10 +305,9 @@ api.interceptors.response.use(
 );
 
 // Legacy service exports for backward compatibility
-// Updated to match Django endpoints
 export const authService = {
   register: (userData) => api.post('register/', userData),
-  login: (credentials) => api.post('login/', credentials), // Changed from 'token/'
+  login: (credentials) => api.post('login/', credentials),
   getUserDetails: () => api.get('user/'),
   refreshToken: (refreshToken) => api.post('token/refresh/', { refresh: refreshToken }),
   logout: () => {
@@ -318,7 +327,7 @@ export const articlesService = {
   update: (id, articleData) => api.put(`articles/${id}/`, articleData),
   delete: (id) => api.delete(`articles/${id}/`),
   getComments: (id) => api.get(`articles/${id}/comments/`),
-  getPopular: () => api.get('articles/popular/') // Note: You'll need to implement this endpoint in Django
+  getPopular: () => api.get('articles/popular/')
 };
 
 // Comments Service - aligned with backend endpoints
@@ -329,7 +338,7 @@ export const commentsService = {
     return api.post(`articles/${article}/comments/`, data);
   },
   reply: (commentId, replyData) => {
-    // Your backend should have an endpoint for replies
+    // Extract article ID for the reply
     const { article, ...data } = replyData;
     return api.post(`articles/${article}/comments/`, {
       ...data,
@@ -337,7 +346,7 @@ export const commentsService = {
     });
   },
   delete: (id) => api.delete(`comments/${id}/`),
-  update: (id, commentData) => api.put(`comments/${id}/`, commentData)
+  update: (id, commentData) => api.patch(`comments/${id}/`, commentData)
 };
 
 // User Profile Service - aligned with backend endpoints
@@ -346,7 +355,7 @@ export const profileService = {
     return api.get(`profile/${id}/`);
   },
   getCurrentUserProfile: () => api.get('profile/'),
-  updateProfile: (id, profileData) => {
+  updateProfile: (profileData) => {
     // Handle FormData for file uploads
     const headers = profileData instanceof FormData 
       ? { 'Content-Type': 'multipart/form-data' } 

@@ -44,6 +44,18 @@ export const addReply = createAsyncThunk(
   }
 );
 
+export const updateComment = createAsyncThunk(
+  'comments/update',
+  async ({ commentId, content }, { rejectWithValue }) => {
+    try {
+      const response = await commentsService.update(commentId, { content });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to update comment');
+    }
+  }
+);
+
 export const deleteComment = createAsyncThunk(
   'comments/delete',
   async (commentId, { rejectWithValue }) => {
@@ -68,6 +80,44 @@ const handleApiError = (error, defaultMessage = 'An error occurred') => {
     // Request setup error
     return { message: `Error: ${error.message || defaultMessage}` };
   }
+};
+
+// Improved function to recursively find and update a comment or reply
+const findAndUpdateComment = (comments, targetId, updateFn) => {
+  return comments.map(comment => {
+    // Check if this is the target comment
+    if (comment.id === targetId) {
+      return updateFn(comment);
+    }
+    
+    // Check if there are replies and if the target is among them
+    if (comment.replies && comment.replies.length > 0) {
+      return {
+        ...comment,
+        replies: findAndUpdateComment(comment.replies, targetId, updateFn)
+      };
+    }
+    
+    // Not found in this branch
+    return comment;
+  });
+};
+
+// Similar function to find and remove a comment
+const findAndRemoveComment = (comments, targetId) => {
+  // Filter out the target comment at this level
+  const filteredComments = comments.filter(comment => comment.id !== targetId);
+  
+  // Process replies for each remaining comment
+  return filteredComments.map(comment => {
+    if (comment.replies && comment.replies.length > 0) {
+      return {
+        ...comment,
+        replies: findAndRemoveComment(comment.replies, targetId)
+      };
+    }
+    return comment;
+  });
 };
 
 // Comments slice
@@ -110,7 +160,22 @@ const commentsSlice = createSlice({
         if (!Array.isArray(state.comments)) {
           state.comments = [];
         }
-        state.comments.push(action.payload);
+        
+        // Add the new comment
+        if (action.payload.reply_to) {
+          // This is a reply to an existing comment
+          state.comments = findAndUpdateComment(
+            state.comments,
+            action.payload.reply_to,
+            (comment) => ({
+              ...comment,
+              replies: [...(comment.replies || []), action.payload]
+            })
+          );
+        } else {
+          // This is a top-level comment
+          state.comments.push(action.payload);
+        }
       })
       .addCase(addComment.rejected, (state, action) => {
         state.isLoading = false;
@@ -129,20 +194,37 @@ const commentsSlice = createSlice({
           state.comments = [];
         }
         
-        // Find the parent comment and add the reply
-        const parentIndex = state.comments.findIndex(
-          comment => comment.id === action.payload.reply_to
+        // Use the helper function to find the parent and add the reply
+        state.comments = findAndUpdateComment(
+          state.comments,
+          action.payload.reply_to,
+          (comment) => ({
+            ...comment,
+            replies: [...(comment.replies || []), action.payload]
+          })
         );
-        
-        if (parentIndex !== -1) {
-          // Initialize replies array if it doesn't exist
-          if (!state.comments[parentIndex].replies) {
-            state.comments[parentIndex].replies = [];
-          }
-          state.comments[parentIndex].replies.push(action.payload);
-        }
       })
       .addCase(addReply.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      
+      // Update comment
+      .addCase(updateComment.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateComment.fulfilled, (state, action) => {
+        state.isLoading = false;
+        
+        // Find and update the comment or reply
+        state.comments = findAndUpdateComment(
+          state.comments,
+          action.payload.id,
+          () => action.payload
+        );
+      })
+      .addCase(updateComment.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
@@ -154,25 +236,9 @@ const commentsSlice = createSlice({
       })
       .addCase(deleteComment.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Ensure comments is an array before filtering
-        if (!Array.isArray(state.comments)) {
-          state.comments = [];
-          return;
-        }
         
-        // Remove comment from state
-        state.comments = state.comments.filter(
-          comment => comment.id !== action.payload
-        );
-        
-        // Also check if it's a reply and remove from parent
-        state.comments.forEach(comment => {
-          if (comment.replies) {
-            comment.replies = comment.replies.filter(
-              reply => reply.id !== action.payload
-            );
-          }
-        });
+        // Remove the comment using the helper function
+        state.comments = findAndRemoveComment(state.comments, action.payload);
       })
       .addCase(deleteComment.rejected, (state, action) => {
         state.isLoading = false;

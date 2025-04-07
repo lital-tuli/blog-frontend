@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchArticles } from '../store/articlesSlice';
 import ArticleCard from '../components/articles/ArticleCard';
+import Loading from '../components/common/Loading';
+import ErrorMessage from '../components/common/ErrorMessage';
 
 const HomePage = () => {
   const dispatch = useDispatch();
@@ -10,11 +12,10 @@ const HomePage = () => {
   const { isAuthenticated } = useSelector(state => state.auth);
 
   useEffect(() => {
-    // Fetch only the 3 most recent published articles for the homepage
-    dispatch(fetchArticles({ limit: 3, status: 'published' }))
+    // Fetch all published articles 
+    dispatch(fetchArticles({ status: 'published' }))
       .catch(err => {
         console.error('Failed to fetch articles:', err);
-        // Error is already handled by the slice, so we don't need to do anything else here
       });
   }, [dispatch]);
 
@@ -64,27 +65,19 @@ const HomePage = () => {
 
         {/* Loading State */}
         {isLoading && articles.length === 0 && (
-          <div className="text-center my-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="mt-2">Loading articles...</p>
-          </div>
+          <Loading message="Loading articles..." className="my-5" />
         )}
 
         {/* Error State */}
         {error && (
-          <div className="alert alert-danger" role="alert">
-            <i className="fas fa-exclamation-circle me-2"></i>
-            Error: {error.message || "Failed to load articles. Please try again later."}
-          </div>
+          <ErrorMessage error={error} />
         )}
 
         {/* Articles Grid */}
         <div className="row g-4">
           {articles.length > 0 ? (
-            articles.map(article => (
-              <div key={article.id} className="col-md-4">
+            articles.slice(0, 6).map(article => (
+              <div key={article.id} className="col-md-4 mb-4">
                 <ArticleCard article={article} />
               </div>
             ))
@@ -97,6 +90,15 @@ const HomePage = () => {
             )
           )}
         </div>
+
+        {/* Show more button if there are more than 6 articles */}
+        {articles.length > 6 && (
+          <div className="text-center mt-4">
+            <Link to="/articles" className="btn btn-primary">
+              <i className="fas fa-list me-2"></i> View All Articles
+            </Link>
+          </div>
+        )}
 
         {/* Features Section */}
         <div className="row mt-5 pt-5 border-top">

@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { addComment, addReply, deleteComment } from '../../store/commentsSlice';
+import { 
+  fetchComments, 
+  addComment, 
+  addReply, 
+  deleteComment, 
+  updateComment 
+} from '../../store/commentsSlice';
+import { useToastContext } from '../../context/ToastContext';
 
-const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText = "Post Comment", cancelAction = null }) => {
-  const [commentText, setCommentText] = useState('');
-const { user } = useSelector(state => state.auth);
-const isAdmin = user?.is_staff || user?.groups?.includes('management');
+const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText = "Post Comment", initialValue = "", cancelAction = null }) => {
+  const [commentText, setCommentText] = useState(initialValue);
+  
+  // Reset form when initialValue changes (used for editing)
+  useEffect(() => {
+    setCommentText(initialValue);
+  }, [initialValue]);
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     if (commentText.trim()) {
@@ -14,7 +25,6 @@ const isAdmin = user?.is_staff || user?.groups?.includes('management');
       setCommentText('');
     }
   };
-  
   
   return (
     <form onSubmit={handleSubmit}>
@@ -52,15 +62,19 @@ const isAdmin = user?.is_staff || user?.groups?.includes('management');
 
 const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
   const dispatch = useDispatch();
+  const { showSuccess, showError } = useToastContext();
   const maxDepth = 2; // Maximum nesting level for replies
   const { user } = useSelector(state => state.auth);
-  const isAdmin = user?.role === 'admin';
   
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Check if current user is the author of this comment
+  // Check permissions
+  const isAdmin = user?.is_staff || user?.groups?.includes('management');
   const isAuthor = currentUserId && comment.author_id === currentUserId;
+  const canEdit = isAuthor;
+  const canDelete = isAdmin || isAuthor;
   
   // Format date
   const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
@@ -78,13 +92,40 @@ const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
       reply_to: comment.id
     };
     
-    dispatch(addReply({ commentId: comment.id, replyData }));
-    setShowReplyForm(false);
+    dispatch(addReply({ commentId: comment.id, replyData }))
+      .unwrap()
+      .then(() => {
+        setShowReplyForm(false);
+        showSuccess('Reply added successfully');
+      })
+      .catch(error => {
+        showError(error.message || 'Failed to add reply');
+      });
+  };
+  
+  const handleEditSubmit = (editedText) => {
+    dispatch(updateComment({ commentId: comment.id, content: editedText }))
+      .unwrap()
+      .then(() => {
+        setShowEditForm(false);
+        showSuccess('Comment updated successfully');
+      })
+      .catch(error => {
+        showError(error.message || 'Failed to update comment');
+      });
   };
   
   const handleDelete = () => {
-    dispatch(deleteComment(comment.id));
-    setShowDeleteConfirm(false);
+    dispatch(deleteComment(comment.id))
+      .unwrap()
+      .then(() => {
+        setShowDeleteConfirm(false);
+        showSuccess('Comment deleted successfully');
+      })
+      .catch(error => {
+        showError(error.message || 'Failed to delete comment');
+        setShowDeleteConfirm(false);
+      });
   };
   
   return (
@@ -101,41 +142,69 @@ const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
                 <small className="text-muted">{formattedDate}</small>
               </div>
             </div>
-  {depth < maxDepth && (
-    <div className="dropdown">
-      <button className="btn btn-sm text-muted" type="button" id={`dropdownMenuButton-${comment.id}`} data-bs-toggle="dropdown" aria-expanded="false">
-        <i className="fas fa-ellipsis-v"></i>
-      </button>
-      <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${comment.id}`}>
-        <li>
-          <button 
-            className="dropdown-item" 
-            onClick={() => setShowReplyForm(!showReplyForm)}
-          >
-            <i className="fas fa-reply me-2"></i> Reply
-          </button>
-        </li>
-        {isAdmin && ( // Add a check for admin role
-          <li>
-            <button 
-              className="dropdown-item text-danger" 
-              onClick={() => setShowDeleteConfirm(true)}
-            >
-              <i className="fas fa-trash-alt me-2"></i> Delete
-            </button>
-          </li>
-        )}
-      </ul>
-    </div>
-  )}
-</div>
-          
-          <div className="comment-content mb-3">
-            <p className="card-text mb-0">{comment.content}</p>
+            
+            {/* Comment actions menu */}
+            <div className="dropdown">
+              <button className="btn btn-sm text-muted" type="button" id={`dropdownMenuButton-${comment.id}`} data-bs-toggle="dropdown" aria-expanded="false">
+                <i className="fas fa-ellipsis-v"></i>
+              </button>
+              <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdownMenuButton-${comment.id}`}>
+                {depth < maxDepth && (
+                  <li>
+                    <button 
+                      className="dropdown-item" 
+                      onClick={() => setShowReplyForm(!showReplyForm)}
+                    >
+                      <i className="fas fa-reply me-2"></i> Reply
+                    </button>
+                  </li>
+                )}
+                
+                {canEdit && (
+                  <li>
+                    <button 
+                      className="dropdown-item" 
+                      onClick={() => setShowEditForm(true)}
+                    >
+                      <i className="fas fa-edit me-2"></i> Edit
+                    </button>
+                  </li>
+                )}
+                
+                {canDelete && (
+                  <li>
+                    <button 
+                      className="dropdown-item text-danger" 
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <i className="fas fa-trash-alt me-2"></i> Delete
+                    </button>
+                  </li>
+                )}
+              </ul>
+            </div>
           </div>
           
+          {/* Comment content or edit form */}
+          {showEditForm ? (
+            <div className="mb-3">
+              <CommentForm 
+                onSubmit={handleEditSubmit} 
+                placeholder="Edit your comment..." 
+                buttonText="Save Changes"
+                initialValue={comment.content}
+                cancelAction={() => setShowEditForm(false)}
+              />
+            </div>
+          ) : (
+            <div className="comment-content mb-3">
+              <p className="card-text mb-0">{comment.content}</p>
+            </div>
+          )}
+          
+          {/* Quick reply button - outside dropdown for convenience */}
           <div className="d-flex gap-2">
-            {depth < maxDepth && !showReplyForm && (
+            {depth < maxDepth && !showReplyForm && !showEditForm && (
               <button 
                 onClick={() => setShowReplyForm(true)} 
                 className="btn btn-sm btn-light"
@@ -145,6 +214,7 @@ const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
             )}
           </div>
           
+          {/* Reply form */}
           {showReplyForm && (
             <div className="mt-3">
               <CommentForm 
@@ -156,6 +226,7 @@ const Comment = ({ comment, articleId, currentUserId, depth = 0 }) => {
             </div>
           )}
           
+          {/* Delete confirmation */}
           {showDeleteConfirm && (
             <div className="alert alert-danger mt-3">
               <p className="mb-2"><i className="fas fa-exclamation-triangle me-2"></i> Are you sure you want to delete this comment?</p>
@@ -200,6 +271,22 @@ const CommentSection = ({ articleId, isAuthenticated }) => {
   const dispatch = useDispatch();
   const { comments, isLoading, error } = useSelector(state => state.comments);
   const { user } = useSelector(state => state.auth);
+  const { showSuccess, showError } = useToastContext();
+  
+  // Load comments when component mounts or articleId changes
+  useEffect(() => {
+    if (articleId) {
+      dispatch(fetchComments(articleId))
+        .catch(err => {
+          console.error('Failed to fetch comments:', err);
+        });
+    }
+    
+    // Cleanup when component unmounts
+    return () => {
+      // No need to clear comments anymore - they should persist in Redux store
+    };
+  }, [dispatch, articleId]);
   
   const handleCommentSubmit = (commentText) => {
     const commentData = {
@@ -207,7 +294,14 @@ const CommentSection = ({ articleId, isAuthenticated }) => {
       content: commentText
     };
     
-    dispatch(addComment(commentData));
+    dispatch(addComment(commentData))
+      .unwrap()
+      .then(() => {
+        showSuccess('Comment added successfully');
+      })
+      .catch(error => {
+        showError(error.message || 'Failed to add comment');
+      });
   };
   
   return (
@@ -234,7 +328,7 @@ const CommentSection = ({ articleId, isAuthenticated }) => {
         </div>
       )}
       
-      {isLoading && (
+      {isLoading && comments.length === 0 && (
         <div className="text-center my-4">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading comments...</span>
