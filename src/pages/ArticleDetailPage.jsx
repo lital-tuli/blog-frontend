@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchArticleById, deleteArticle } from '../store/articlesSlice';
+import { fetchArticleById, deleteArticle, fetchArticles } from '../store/articlesSlice';
 import { fetchComments } from '../store/commentsSlice';
 import CommentSection from '../components/comments/CommentSection';
 import { useToastContext } from '../context/ToastContext';

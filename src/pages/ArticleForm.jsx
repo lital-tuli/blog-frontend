@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Formik, Form, Field, ErrorMessage as FormikErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { fetchArticleById, createArticle, updateArticle, clearArticle } from '../store/articlesSlice';
 import { useToastContext } from '../context/ToastContext';
 import { handleApiErrorWithUI } from '../utils/errorHandler';
 import Loading from '../components/common/Loading';
-import ErrorMessage from '../components/common/ErrorMessage';
+import ErrorMessageComponent from '../components/common/ErrorMessage';
 
 // Validation schema for the article form
 const ArticleSchema = Yup.object().shape({
@@ -115,7 +115,7 @@ const ArticleForm = () => {
   }
   
   if (isEditMode && error) {
-    return <ErrorMessage error={error} />;
+    return <ErrorMessageComponent error={error} />;
   }
   
   return (
@@ -229,7 +229,7 @@ const ArticleForm = () => {
                               className={`form-control form-control-lg ${touched.title && errors.title ? 'is-invalid' : ''}`}
                               placeholder="Enter article title" 
                             />
-                            <ErrorMessage 
+                            <FormikErrorMessage 
                               name="title" 
                               component="div" 
                               className="invalid-feedback" 
@@ -248,7 +248,7 @@ const ArticleForm = () => {
                               rows="15"
                               placeholder="Write your article content here..."
                             />
-                            <ErrorMessage 
+                            <FormikErrorMessage 
                               name="content" 
                               component="div" 
                               className="invalid-feedback" 
@@ -271,7 +271,7 @@ const ArticleForm = () => {
                                 className={`form-control ${touched.tags && errors.tags ? 'is-invalid' : ''}`}
                                 placeholder="e.g. python, django, tutorial"
                               />
-                              <ErrorMessage 
+                              <FormikErrorMessage 
                                 name="tags" 
                                 component="div" 
                                 className="invalid-feedback" 
@@ -295,7 +295,7 @@ const ArticleForm = () => {
                                 <option value="published">Published</option>
                                 <option value="archived">Archived</option>
                               </Field>
-                              <ErrorMessage 
+                              <FormikErrorMessage 
                                 name="status" 
                                 component="div" 
                                 className="invalid-feedback" 
