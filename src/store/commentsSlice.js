@@ -91,7 +91,8 @@ const commentsSlice = createSlice({
       })
       .addCase(fetchComments.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.comments = action.payload;
+        // Ensure comments is always an array
+        state.comments = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(fetchComments.rejected, (state, action) => {
         state.isLoading = false;
@@ -105,6 +106,10 @@ const commentsSlice = createSlice({
       })
       .addCase(addComment.fulfilled, (state, action) => {
         state.isLoading = false;
+        // Ensure comments is an array before pushing to it
+        if (!Array.isArray(state.comments)) {
+          state.comments = [];
+        }
         state.comments.push(action.payload);
       })
       .addCase(addComment.rejected, (state, action) => {
@@ -119,6 +124,11 @@ const commentsSlice = createSlice({
       })
       .addCase(addReply.fulfilled, (state, action) => {
         state.isLoading = false;
+        // Make sure state.comments is an array
+        if (!Array.isArray(state.comments)) {
+          state.comments = [];
+        }
+        
         // Find the parent comment and add the reply
         const parentIndex = state.comments.findIndex(
           comment => comment.id === action.payload.reply_to
@@ -144,6 +154,12 @@ const commentsSlice = createSlice({
       })
       .addCase(deleteComment.fulfilled, (state, action) => {
         state.isLoading = false;
+        // Ensure comments is an array before filtering
+        if (!Array.isArray(state.comments)) {
+          state.comments = [];
+          return;
+        }
+        
         // Remove comment from state
         state.comments = state.comments.filter(
           comment => comment.id !== action.payload

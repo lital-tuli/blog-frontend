@@ -117,7 +117,7 @@ const ArticlesPage = () => {
               </div>
               
               <div className="col-lg-4 mb-2 mb-lg-0 text-center">
-                {!isLoading && articles.length > 0 && (
+                {!isLoading && articles && articles.length > 0 && (
                   <span className="text-muted">
                     Showing {articles.length} of {totalPages * 10} articles
                   </span>
@@ -175,18 +175,48 @@ const ArticlesPage = () => {
           </div>
         </div>
           
-          {/* Articles List */}
-          <div className={`row ${viewMode === 'list' ? 'flex-column' : ''}`}>
-            {isLoading && <p>Loading articles...</p>}
-            {error && <p className="text-danger">{error}</p>}
-            {!isLoading && articles.length === 0 && <p>No articles found.</p>}
-            {articles.map(article => (
+        {/* Articles List */}
+        <div className={`row ${viewMode === 'list' ? 'flex-column' : ''}`}>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="col-12 text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading articles...</span>
+              </div>
+              <p className="mt-2">Loading articles...</p>
+            </div>
+          )}
+          
+          {/* Error State */}
+          {error && (
+            <div className="col-12">
+              <div className="alert alert-danger" role="alert">
+                <i className="fas fa-exclamation-circle me-2"></i>
+                {error.message || "Failed to load articles. Please try again later."}
+              </div>
+            </div>
+          )}
+          
+          {/* No Articles State */}
+          {!isLoading && (!articles || articles.length === 0) && (
+            <div className="col-12 text-center py-5">
+              <i className="fas fa-newspaper fa-3x text-muted mb-3"></i>
+              <p className="lead">No articles found. Try adjusting your search criteria.</p>
+            </div>
+          )}
+          
+          {/* Articles Grid */}
+          {!isLoading && articles && articles.length > 0 && 
+            articles.map(article => (
               <div key={article.id} className={`col-${viewMode === 'list' ? '12' : '6'} mb-4`}>
                 <ArticleCard article={article} viewMode={viewMode} />
               </div>
-            ))}
-          </div>
-          {/* Pagination */}
+            ))
+          }
+        </div>
+        
+        {/* Pagination */}
+        {!isLoading && articles && articles.length > 0 && totalPages > 1 && (
           <nav aria-label="Page navigation">
             <ul className="pagination justify-content-center">
               {Array.from({ length: totalPages }, (_, index) => (
@@ -201,6 +231,8 @@ const ArticlesPage = () => {
               ))}
             </ul>
           </nav>
+        )}
+        
         {/* Add Article Button */}
         {isAuthenticated && (
           <div className="text-center mt-4">
@@ -215,4 +247,3 @@ const ArticlesPage = () => {
 };
 
 export default ArticlesPage;
-

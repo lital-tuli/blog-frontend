@@ -1,4 +1,3 @@
-// src/store/articlesSlice.js - Updated version
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { articlesService } from '../services/api';
 
@@ -74,15 +73,17 @@ export const deleteArticle = createAsyncThunk(
 
 // Helper function for consistent error handling
 const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  console.error('API Error:', error);
+  
   if (error.response) {
     // Server responded with error
-    return error.response.data;
+    return rejectWithValue(error.response.data || { message: defaultMessage });
   } else if (error.request) {
     // No response received
-    return { message: 'No response from server. Please check your internet connection.' };
+    return rejectWithValue({ message: 'No response from server. Please check your internet connection.' });
   } else {
     // Request setup error
-    return { message: `Error: ${error.message || defaultMessage}` };
+    return rejectWithValue({ message: `Error: ${error.message || defaultMessage}` });
   }
 };
 
@@ -110,20 +111,35 @@ const articlesSlice = createSlice({
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
         state.isLoading = false;
+        
+        // Check if we received a valid response
+        if (!action.payload) {
+          state.articles = [];
+          state.totalPages = 0;
+          state.currentPage = 1;
+          return;
+        }
+        
         // Handle both paginated and non-paginated responses
         if (action.payload.results) {
-          state.articles = action.payload.results;
+          // Ensure results is an array
+          state.articles = Array.isArray(action.payload.results) ? action.payload.results : [];
           state.totalPages = action.payload.total_pages || 
-                            Math.ceil(action.payload.count / 10); // Assuming 10 per page
+                          Math.ceil(action.payload.count / 10); // Assuming 10 per page
           state.currentPage = action.payload.current_page || 1;
-        } else {
+        } else if (Array.isArray(action.payload)) {
           state.articles = action.payload;
           state.totalPages = 1;
+        } else {
+          // Fallback for unexpected response format
+          state.articles = [];
+          state.totalPages = 0;
         }
       })
       .addCase(fetchArticles.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload || { message: 'An error occurred while fetching articles' };
+        state.articles = []; // Reset articles on error
       })
       
       // Fetch article by ID
@@ -138,6 +154,7 @@ const articlesSlice = createSlice({
       .addCase(fetchArticleById.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.article = null; // Reset article on error
       })
       
       // Create article
@@ -147,7 +164,9 @@ const articlesSlice = createSlice({
       })
       .addCase(createArticle.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.articles.unshift(action.payload); // Add new article to the start of the array
+        if (action.payload && Array.isArray(state.articles)) {
+          state.articles.unshift(action.payload); // Add new article to the start of the array
+        }
       })
       .addCase(createArticle.rejected, (state, action) => {
         state.isLoading = false;
@@ -161,13 +180,15 @@ const articlesSlice = createSlice({
       })
       .addCase(updateArticle.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Update in the articles array if present
-        const index = state.articles.findIndex(a => a.id === action.payload.id);
-        if (index !== -1) {
-          state.articles[index] = action.payload;
+        if (action.payload && Array.isArray(state.articles)) {
+          // Update in the articles array if present
+          const index = state.articles.findIndex(a => a.id === action.payload.id);
+          if (index !== -1) {
+            state.articles[index] = action.payload;
+          }
         }
         // Update the current article if it's the one being viewed
-        if (state.article && state.article.id === action.payload.id) {
+        if (state.article && state.article.id === action.payload?.id) {
           state.article = action.payload;
         }
       })
@@ -183,7 +204,9 @@ const articlesSlice = createSlice({
       })
       .addCase(deleteArticle.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.articles = state.articles.filter(article => article.id !== action.payload);
+        if (Array.isArray(state.articles)) {
+          state.articles = state.articles.filter(article => article.id !== action.payload);
+        }
         if (state.article && state.article.id === action.payload) {
           state.article = null;
         }
