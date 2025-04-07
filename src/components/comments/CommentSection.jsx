@@ -13,19 +13,17 @@ import { useToastContext } from '../../context/ToastContext';
 const CommentForm = ({ onSubmit, placeholder = "Write a comment...", buttonText = "Post Comment", initialValue = "", cancelAction = null }) => {
   const [commentText, setCommentText] = useState(initialValue);
   
-  // Reset form when initialValue changes (used for editing)
   useEffect(() => {
     setCommentText(initialValue);
   }, [initialValue]);
   
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (commentText.trim()) {
-      onSubmit(commentText);
-      setCommentText('');
-    }
-  };
-  
+const handleSubmit = (e) => {
+  e.preventDefault();
+  if (commentText.trim()) {
+    onSubmit(commentText);
+    setCommentText('');
+  }
+};
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-3">

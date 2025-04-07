@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { articlesService } from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
 
 const initialState = {
   articles: [],
@@ -7,18 +8,42 @@ const initialState = {
   totalPages: 0,
   currentPage: 1,
   isLoading: false,
-  error: null
+  error: null,
+  lastFetched: null,
+  lastFetchParams: null
 };
 
 // Async thunks
 export const fetchArticles = createAsyncThunk(
   'articles/fetchAll',
-  async (params = {}, { rejectWithValue }) => {
+  async (params = {}, { getState, rejectWithValue }) => {
+    const state = getState();
+    const now = Date.now();
+    const cacheTime = 5 * 60 * 1000; // 5 minutes
+    
+    // Use cached data if available and recent, and params match
+    const cachedParams = state.articles.lastFetchParams;
+    const paramsMatch = cachedParams && 
+      Object.keys(params).length === Object.keys(cachedParams).length &&
+      Object.keys(params).every(key => params[key] === cachedParams[key]);
+      
+    if (state.articles.lastFetched && 
+        now - state.articles.lastFetched < cacheTime &&
+        state.articles.articles.length > 0 &&
+        paramsMatch) {
+      return {
+        results: state.articles.articles,
+        count: state.articles.articles.length,
+        current_page: state.articles.currentPage,
+        total_pages: state.articles.totalPages
+      };
+    }
+    
     try {
       const response = await articlesService.getAll(params);
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to fetch articles');
+      return rejectWithValue(handleApiError(error, 'Failed to fetch articles'));
     }
   }
 );
@@ -30,7 +55,7 @@ export const fetchArticleById = createAsyncThunk(
       const response = await articlesService.getById(id);
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to fetch article');
+      return rejectWithValue(handleApiError(error, 'Failed to fetch article'));
     }
   }
 );
@@ -42,7 +67,7 @@ export const createArticle = createAsyncThunk(
       const response = await articlesService.create(articleData);
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to create article');
+      return rejectWithValue(handleApiError(error, 'Failed to create article'));
     }
   }
 );
@@ -54,7 +79,7 @@ export const updateArticle = createAsyncThunk(
       const response = await articlesService.update(id, articleData);
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to update article');
+      return rejectWithValue(handleApiError(error, 'Failed to update article'));
     }
   }
 );
@@ -66,26 +91,10 @@ export const deleteArticle = createAsyncThunk(
       await articlesService.delete(id);
       return id;
     } catch (error) {
-      return handleApiError(error, 'Failed to delete article');
+      return rejectWithValue(handleApiError(error, 'Failed to delete article'));
     }
   }
 );
-
-// Helper function for consistent error handling
-const handleApiError = (error, defaultMessage = 'An error occurred') => {
-  console.error('API Error:', error);
-  
-  if (error.response) {
-    // Server responded with error
-    return rejectWithValue(error.response.data || { message: defaultMessage });
-  } else if (error.request) {
-    // No response received
-    return rejectWithValue({ message: 'No response from server. Please check your internet connection.' });
-  } else {
-    // Request setup error
-    return rejectWithValue({ message: `Error: ${error.message || defaultMessage}` });
-  }
-};
 
 // Articles slice
 const articlesSlice = createSlice({
@@ -100,6 +109,10 @@ const articlesSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
+    },
+    invalidateCache: (state) => {
+      state.lastFetched = null;
+      state.lastFetchParams = null;
     }
   },
   extraReducers: (builder) => {
@@ -111,6 +124,8 @@ const articlesSlice = createSlice({
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.lastFetched = Date.now();
+        state.lastFetchParams = action.meta.arg; // Store the params for cache comparison
         
         // Check if we received a valid response
         if (!action.payload) {
@@ -166,6 +181,7 @@ const articlesSlice = createSlice({
         state.isLoading = false;
         if (action.payload && Array.isArray(state.articles)) {
           state.articles.unshift(action.payload); // Add new article to the start of the array
+          state.lastFetched = null; // Invalidate cache on mutation
         }
       })
       .addCase(createArticle.rejected, (state, action) => {
@@ -180,6 +196,8 @@ const articlesSlice = createSlice({
       })
       .addCase(updateArticle.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.lastFetched = null; // Invalidate cache on mutation
+        
         if (action.payload && Array.isArray(state.articles)) {
           // Update in the articles array if present
           const index = state.articles.findIndex(a => a.id === action.payload.id);
@@ -204,6 +222,8 @@ const articlesSlice = createSlice({
       })
       .addCase(deleteArticle.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.lastFetched = null; // Invalidate cache on mutation
+        
         if (Array.isArray(state.articles)) {
           state.articles = state.articles.filter(article => article.id !== action.payload);
         }
@@ -218,5 +238,5 @@ const articlesSlice = createSlice({
   }
 });
 
-export const { setCurrentPage, clearArticle, clearError } = articlesSlice.actions;
+export const { setCurrentPage, clearArticle, clearError, invalidateCache } = articlesSlice.actions;
 export default articlesSlice.reducer;

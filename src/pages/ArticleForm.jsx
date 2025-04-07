@@ -4,6 +4,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { fetchArticleById, createArticle, updateArticle, clearArticle } from '../store/articlesSlice';
+import { useToastContext } from '../context/ToastContext';
+import { handleApiErrorWithUI } from '../utils/errorHandler';
+import Loading from '../components/common/Loading';
+import ErrorMessage from '../components/common/ErrorMessage';
 
 // Validation schema for the article form
 const ArticleSchema = Yup.object().shape({
@@ -30,12 +34,18 @@ const ArticleForm = () => {
   const { article, isLoading, error } = useSelector(state => state.articles);
   const [isEditMode, setIsEditMode] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const { showSuccess, showError } = useToastContext();
   
   useEffect(() => {
     // If ID is provided, we're in edit mode
     if (id) {
       setIsEditMode(true);
-      dispatch(fetchArticleById(id));
+      dispatch(fetchArticleById(id))
+        .unwrap()
+        .catch(error => {
+          handleApiErrorWithUI(error, showError);
+        });
     } else {
       // Clear any existing article from state in create mode
       dispatch(clearArticle());
@@ -45,35 +55,44 @@ const ArticleForm = () => {
     return () => {
       dispatch(clearArticle());
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, showError]);
   
-  const handleSubmit = (values, { setSubmitting }) => {
-    console.log('Form Submit Values:', values);
-    
+  const handleSubmit = (values, { setSubmitting, setFieldError }) => {
     const formattedValues = {
       ...values,
       tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : []
     };
     
-    console.log('Formatted Values:', formattedValues);
-    
     const action = isEditMode
-      ? updateArticle({ id, articleData: formattedValues })
+      ? updateArticle({ id, ...formattedValues })
       : createArticle(formattedValues);
-    
-    console.log('Dispatching Action:', action);
     
     dispatch(action)
       .unwrap()
       .then((result) => {
-        console.log('Article Creation Result:', result);
-        setSubmitting(false);
+        showSuccess(`Article ${isEditMode ? 'updated' : 'created'} successfully!`);
         navigate(`/articles/${result.id}`);
       })
       .catch((err) => {
-        console.error('Failed to save article:', err);
+        handleApiErrorWithUI(err, showError, setFieldError);
+      })
+      .finally(() => {
         setSubmitting(false);
       });
+  };
+  
+  const handleImageChange = (event, setFieldValue) => {
+    const file = event.currentTarget.files[0];
+    if (file) {
+      setFieldValue('image', file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
   
   // Initial form values
@@ -92,42 +111,12 @@ const ArticleForm = () => {
       };
   
   if (isEditMode && isLoading && !article) {
-    return (
-      <div className="container py-5 text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading article...</span>
-        </div>
-        <p className="mt-2">Loading article...</p>
-      </div>
-    );
+    return <Loading message="Loading article..." />;
   }
   
-if (isEditMode && error) {
-  return (
-    <div className="container py-5">
-      <div className="alert alert-danger d-flex align-items-center" role="alert">
-        <i className="fas fa-exclamation-circle me-2"></i>
-        <div>{error.message || 'Error loading article'}</div>
-      </div>
-    </div>
-  );
-}
-
-const [imagePreview, setImagePreview] = useState(null);
-
-const handleImageChange = (event, setFieldValue) => {
-  const file = event.currentTarget.files[0];
-  if (file) {
-    setFieldValue('image', file);
-    
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+  if (isEditMode && error) {
+    return <ErrorMessage error={error} />;
   }
-};
   
   return (
     <div className="bg-light py-5">
@@ -168,68 +157,64 @@ const handleImageChange = (event, setFieldValue) => {
                   onSubmit={handleSubmit}
                   enableReinitialize={true}
                 >
-                  {({ isSubmitting, touched, errors, values }) => (
+                  {({ isSubmitting, touched, errors, values, setFieldValue }) => (
                     <Form>
                       {/* Preview / Edit Mode Tabs */}
-                      <ul className="nav nav-tabs mb-4">
-                        <li className="nav-item">
-                          <button 
-                            type="button"
-                            className={`nav-link ${!previewMode ? 'active' : ''}`} 
-                            onClick={() => setPreviewMode(false)}
-                          >
-                            <i className="fas fa-edit me-2"></i>Edit
-                          </button>
-                        </li>
-                        <li className="nav-item">
-                          <button 
-                            type="button"
-                            className={`nav-link ${previewMode ? 'active' : ''}`}
-                            onClick={() => setPreviewMode(true)}
-                          >
-                            <i className="fas fa-eye me-2"></i>Preview
-                          </button>
-                        </li>
-                      </ul>
+                      <div className="mb-4 d-flex">
+                        <button 
+                          type="button"
+                          className={`btn ${previewMode ? 'btn-outline-primary' : 'btn-primary'} me-2`}
+                          onClick={() => setPreviewMode(false)}
+                        >
+                          <i className="fas fa-edit me-1"></i> Edit
+                        </button>
+                        <button 
+                          type="button"
+                          className={`btn ${previewMode ? 'btn-primary' : 'btn-outline-primary'}`}
+                          onClick={() => setPreviewMode(true)}
+                        >
+                          <i className="fas fa-eye me-1"></i> Preview
+                        </button>
+                      </div>
 
                       {previewMode ? (
-/* Preview Mode */
-<div className="article-preview">
-  <div className="border p-4 rounded bg-white mb-4">
-    <h1 className="mb-3">{values.title || 'Untitled Article'}</h1>
-    <div className="mb-4">
-      {values.tags && values.tags.split(',').map((tag, index) => (
-        <span key={index} className="badge bg-light text-secondary me-2 mb-2">
-          <i className="fas fa-tag me-1"></i> {tag.trim()}
-        </span>
-      ))}
-    </div>
-    {imagePreview && (
-      <div className="mb-4">
-        <img 
-          src={imagePreview} 
-          alt="Featured" 
-          className="img-fluid rounded" 
-          style={{ maxHeight: '300px' }}
-        />
-      </div>
-    )}
-    <div className="article-content">
-      {values.content ? 
-        values.content.split('\n').map((paragraph, index) => (
-          paragraph ? 
-            <p key={index} className="mb-3">{paragraph}</p> : 
-            <br key={index} />
-        )) : 
-        <p className="text-muted fst-italic">No content yet...</p>
-      }
-    </div>
-    <div className="mt-3 p-2 bg-light rounded small">
-      <i className="fas fa-info-circle me-1 text-primary"></i>
-      Status: <span className="fw-bold">{values.status.charAt(0).toUpperCase() + values.status.slice(1)}</span>
-    </div>
-  </div>
-</div>
+                        /* Preview Mode */
+                        <div className="article-preview">
+                          <div className="border p-4 rounded bg-white mb-4">
+                            <h1 className="mb-3">{values.title || 'Untitled Article'}</h1>
+                            <div className="mb-4">
+                              {values.tags && values.tags.split(',').map((tag, index) => (
+                                <span key={index} className="badge bg-light text-secondary me-2 mb-2">
+                                  <i className="fas fa-tag me-1"></i> {tag.trim()}
+                                </span>
+                              ))}
+                            </div>
+                            {imagePreview && (
+                              <div className="mb-4">
+                                <img 
+                                  src={imagePreview} 
+                                  alt="Featured" 
+                                  className="img-fluid rounded" 
+                                  style={{ maxHeight: '300px' }}
+                                />
+                              </div>
+                            )}
+                            <div className="article-content">
+                              {values.content ? 
+                                values.content.split('\n').map((paragraph, index) => (
+                                  paragraph ? 
+                                    <p key={index} className="mb-3">{paragraph}</p> : 
+                                    <br key={index} />
+                                )) : 
+                                <p className="text-muted fst-italic">No content yet...</p>
+                              }
+                            </div>
+                            <div className="mt-3 p-2 bg-light rounded small">
+                              <i className="fas fa-info-circle me-1 text-primary"></i>
+                              Status: <span className="fw-bold">{values.status.charAt(0).toUpperCase() + values.status.slice(1)}</span>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         /* Edit Mode */
                         <>
@@ -316,6 +301,31 @@ const handleImageChange = (event, setFieldValue) => {
                                 className="invalid-feedback" 
                               />
                             </div>
+                          </div>
+                          
+                          <div className="mb-4">
+                            <label htmlFor="image" className="form-label fw-bold">
+                              <i className="fas fa-image me-2"></i>Featured Image (optional)
+                            </label>
+                            <input
+                              type="file"
+                              id="image"
+                              name="image"
+                              className="form-control"
+                              onChange={(e) => handleImageChange(e, setFieldValue)}
+                              accept="image/*"
+                            />
+                            {imagePreview && (
+                              <div className="mt-2">
+                                <p className="form-text">Image preview:</p>
+                                <img 
+                                  src={imagePreview} 
+                                  alt="Preview" 
+                                  className="img-thumbnail" 
+                                  style={{ maxHeight: '200px' }} 
+                                />
+                              </div>
+                            )}
                           </div>
                         </>
                       )}

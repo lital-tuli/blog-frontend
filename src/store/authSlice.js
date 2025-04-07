@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
 
 // Initialize state from localStorage
 const getUserFromStorage = () => {
@@ -55,8 +56,7 @@ export const registerUser = createAsyncThunk(
         refresh: response.data.refresh
       };
     } catch (error) {
-      console.error('Registration error:', error);
-      return handleApiError(error);
+      return rejectWithValue(handleApiError(error, 'Registration failed'));
     }
   }
 );
@@ -87,8 +87,7 @@ export const loginUser = createAsyncThunk(
         refresh: response.data.refresh
       };
     } catch (error) {
-      console.error('Login error:', error);
-      return handleApiError(error);
+      return rejectWithValue(handleApiError(error, 'Login failed'));
     }
   }
 );
@@ -115,7 +114,7 @@ export const refreshToken = createAsyncThunk(
     } catch (error) {
       console.error('Token refresh failed:', error);
       clearAuthStorage();
-      return handleApiError(error, 'Session expired. Please log in again.');
+      return rejectWithValue(handleApiError(error, 'Session expired. Please log in again.'));
     }
   }
 );
@@ -131,27 +130,10 @@ export const deactivateAccount = createAsyncThunk(
       dispatch(logout());
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to deactivate account');
+      return rejectWithValue(handleApiError(error, 'Failed to deactivate account'));
     }
   }
 );
-
-// Helper function for consistent error handling
-const handleApiError = (error, defaultMessage = 'An error occurred') => {
-  if (error.response) {
-    // Server responded with error
-    if (error.response.status === 401) {
-      return { message: 'Invalid credentials. Please check your username and password.' };
-    }
-    return error.response.data;
-  } else if (error.request) {
-    // No response received
-    return { message: 'No response from server. Please check your internet connection.' };
-  } else {
-    // Request setup error
-    return { message: `Error: ${error.message || defaultMessage}` };
-  }
-};
 
 // Helper function to clear all auth storage items
 const clearAuthStorage = () => {
@@ -198,6 +180,10 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
       }
+    },
+    updateUserData: (state, action) => {
+      state.user = { ...state.user, ...action.payload };
+      localStorage.setItem('user', JSON.stringify(state.user));
     }
   },
   extraReducers: (builder) => {
@@ -267,5 +253,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { logout, clearError, checkAuthState } = authSlice.actions;
+export const { logout, clearError, checkAuthState, updateUserData } = authSlice.actions;
 export default authSlice.reducer;
