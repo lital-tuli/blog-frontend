@@ -15,9 +15,7 @@ export const fetchComments = createAsyncThunk(
       const response = await articlesService.getComments(articleId);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch comments' }
-      );
+      return handleApiError(error, 'Failed to fetch comments');
     }
   }
 );
@@ -29,9 +27,7 @@ export const addComment = createAsyncThunk(
       const response = await commentsService.create(commentData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to add comment' }
-      );
+      return handleApiError(error, 'Failed to add comment');
     }
   }
 );
@@ -43,9 +39,7 @@ export const addReply = createAsyncThunk(
       const response = await commentsService.reply(commentId, replyData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to add reply' }
-      );
+      return handleApiError(error, 'Failed to add reply');
     }
   }
 );
@@ -57,12 +51,24 @@ export const deleteComment = createAsyncThunk(
       await commentsService.delete(commentId);
       return commentId;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to delete comment' }
-      );
+      return handleApiError(error, 'Failed to delete comment');
     }
   }
 );
+
+// Helper function for consistent error handling
+const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  if (error.response) {
+    // Server responded with error
+    return error.response.data;
+  } else if (error.request) {
+    // No response received
+    return { message: 'No response from server. Please check your internet connection.' };
+  } else {
+    // Request setup error
+    return { message: `Error: ${error.message || defaultMessage}` };
+  }
+};
 
 // Comments slice
 const commentsSlice = createSlice({

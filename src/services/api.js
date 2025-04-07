@@ -1,9 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import axios from 'axios';
 
+// Base API URL - ensure this matches your Django server
+const API_BASE_URL = 'http://localhost:8000/api/';
+
 // Base query with auth handling
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://localhost:8000/api/',
+  baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState }) => {
     const token = localStorage.getItem('access_token');
     
@@ -67,7 +70,7 @@ export const blogApi = createApi({
     // Authentication endpoints
     login: builder.mutation({
       query: (credentials) => ({
-        url: 'token/',
+        url: 'login/',  // Updated to match Django endpoint
         method: 'POST',
         body: credentials,
       }),
@@ -153,11 +156,6 @@ export const blogApi = createApi({
       invalidatesTags: [{ type: 'Articles', id: 'LIST' }],
     }),
     
-    getPopularArticles: builder.query({
-      query: () => 'articles/popular/',
-      providesTags: [{ type: 'Articles', id: 'POPULAR' }],
-    }),
-    
     // Comment endpoints
     getArticleComments: builder.query({
       query: (articleId) => `articles/${articleId}/comments/`,
@@ -189,16 +187,23 @@ export const blogApi = createApi({
     
     // Profile endpoints
     getUserProfile: builder.query({
-      query: (userId) => `profile/${userId || ''}`,
+      query: (userId) => userId ? `profile/${userId}/` : 'profile/',
       providesTags: (result, error, userId) => [{ type: 'Profile', id: userId || 'CURRENT' }],
     }),
     
     updateProfile: builder.mutation({
-      query: ({ userId, ...profileData }) => ({
-        url: `profile/${userId || ''}`,
-        method: 'PUT',
-        body: profileData,
-      }),
+      query: ({ userId, ...profileData }) => {
+        // Handle FormData for file uploads
+        const isFormData = profileData instanceof FormData;
+        
+        return {
+          url: userId ? `profile/${userId}/` : 'profile/',
+          method: 'PUT',
+          body: profileData,
+          // Don't set Content-Type when sending FormData - browser will set it with boundary
+          headers: isFormData ? {} : undefined
+        };
+      },
       invalidatesTags: (result, error, { userId }) => [{ type: 'Profile', id: userId || 'CURRENT' }],
     }),
   }),
@@ -206,36 +211,26 @@ export const blogApi = createApi({
 
 // Export hooks
 export const {
-  // Auth hooks
   useLoginMutation,
   useRegisterMutation,
   useRefreshTokenMutation,
   useDeactivateAccountMutation,
-  
-  // User hooks
   useGetCurrentUserQuery,
-  
-  // Article hooks
   useGetArticlesQuery,
   useGetArticleByIdQuery,
   useCreateArticleMutation,
   useUpdateArticleMutation,
   useDeleteArticleMutation,
-  useGetPopularArticlesQuery,
-  
-  // Comment hooks
   useGetArticleCommentsQuery,
   useAddCommentMutation,
   useDeleteCommentMutation,
-  
-  // Profile hooks
   useGetUserProfileQuery,
   useUpdateProfileMutation,
 } = blogApi;
 
 // Create axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/',  
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -258,7 +253,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor for handling token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -273,7 +268,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
         
-        const response = await axios.post('http://localhost:8000/api/token/refresh/', {
+        const response = await axios.post(`${API_BASE_URL}token/refresh/`, {
           refresh: refreshToken
         });
         
@@ -284,9 +279,12 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
+        // Clear auth data
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
+        
+        // Emit logout event for global handling
         window.dispatchEvent(new CustomEvent('auth-logout'));
         return Promise.reject(refreshError);
       }
@@ -297,12 +295,14 @@ api.interceptors.response.use(
 );
 
 // Legacy service exports for backward compatibility
+// Updated to match Django endpoints
 export const authService = {
   register: (userData) => api.post('register/', userData),
-  login: (credentials) => api.post('token/', credentials),
+  login: (credentials) => api.post('login/', credentials), // Changed from 'token/'
   getUserDetails: () => api.get('user/'),
   refreshToken: (refreshToken) => api.post('token/refresh/', { refresh: refreshToken }),
   logout: () => {
+    // Just remove tokens, no endpoint needed
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
@@ -310,7 +310,7 @@ export const authService = {
   deactivateAccount: (password) => api.post('deactivate/', { password })
 };
 
-// Articles Service
+// Articles Service - aligned with backend endpoints
 export const articlesService = {
   getAll: (params) => api.get('articles/', { params }),
   getById: (id) => api.get(`articles/${id}/`),
@@ -318,38 +318,41 @@ export const articlesService = {
   update: (id, articleData) => api.put(`articles/${id}/`, articleData),
   delete: (id) => api.delete(`articles/${id}/`),
   getComments: (id) => api.get(`articles/${id}/comments/`),
-  getPopular: () => api.get('articles/popular/')
+  getPopular: () => api.get('articles/popular/') // Note: You'll need to implement this endpoint in Django
 };
 
-// Comments Service
+// Comments Service - aligned with backend endpoints
 export const commentsService = {
-  create: (commentData) => api.post(`articles/${commentData.article}/comments/`, commentData),
-  reply: (commentId, replyData) => api.post(`comments/${commentId}/reply/`, replyData),
+  create: (commentData) => {
+    // Extract article ID and create comment
+    const { article, ...data } = commentData;
+    return api.post(`articles/${article}/comments/`, data);
+  },
+  reply: (commentId, replyData) => {
+    // Your backend should have an endpoint for replies
+    const { article, ...data } = replyData;
+    return api.post(`articles/${article}/comments/`, {
+      ...data,
+      reply_to: commentId
+    });
+  },
   delete: (id) => api.delete(`comments/${id}/`),
   update: (id, commentData) => api.put(`comments/${id}/`, commentData)
 };
 
-// User Profile Service
+// User Profile Service - aligned with backend endpoints
 export const profileService = {
   getProfile: (id) => {
-    // Validate ID before making request
-    if (!id || isNaN(id)) {
-      return Promise.reject(new Error('Invalid profile ID'));
-    }
     return api.get(`profile/${id}/`);
   },
   getCurrentUserProfile: () => api.get('profile/'),
   updateProfile: (id, profileData) => {
-    // Validate ID before making request
-    if (!id || isNaN(id)) {
-      return Promise.reject(new Error('Invalid profile ID'));
-    }
-
+    // Handle FormData for file uploads
     const headers = profileData instanceof FormData 
       ? { 'Content-Type': 'multipart/form-data' } 
       : {};
     
-    return api.put(`profile/${id}/`, profileData, { headers });
+    return api.put(`profile/`, profileData, { headers });
   }
 };
 

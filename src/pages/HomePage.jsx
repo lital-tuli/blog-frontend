@@ -11,7 +11,11 @@ const HomePage = () => {
 
   useEffect(() => {
     // Fetch only the 3 most recent published articles for the homepage
-    dispatch(fetchArticles({ limit: 3, status: 'published' }));
+    dispatch(fetchArticles({ limit: 3, status: 'published' }))
+      .catch(err => {
+        console.error('Failed to fetch articles:', err);
+        // Error is already handled by the slice, so we don't need to do anything else here
+      });
   }, [dispatch]);
 
   return (
@@ -72,7 +76,7 @@ const HomePage = () => {
         {error && (
           <div className="alert alert-danger" role="alert">
             <i className="fas fa-exclamation-circle me-2"></i>
-            Error: {error.message}
+            Error: {error.message || "Failed to load articles. Please try again later."}
           </div>
         )}
 

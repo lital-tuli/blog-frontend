@@ -76,24 +76,16 @@ export const loginUser = createAsyncThunk(
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       
-      // Fetch user details with the token
-      try {
-        console.log('Fetching user details');
-        const userResponse = await authService.getUserDetails();
-        const userData = userResponse.data;
-        
-        console.log('User details fetched successfully:', userData.username);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        return {
-          user: userData,
-          access: response.data.access,
-          refresh: response.data.refresh
-        };
-      } catch (error) {
-        console.error('Error fetching user details:', error);
-        throw error;
-      }
+      // Save user data from login response
+      const userData = response.data.user;
+      console.log('User details received:', userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return {
+        user: userData,
+        access: response.data.access,
+        refresh: response.data.refresh
+      };
     } catch (error) {
       console.error('Login error:', error);
       return handleApiError(error);

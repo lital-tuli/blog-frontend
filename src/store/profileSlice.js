@@ -14,9 +14,7 @@ export const fetchCurrentUserProfile = createAsyncThunk(
       const response = await profileService.getCurrentUserProfile();
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch your profile' }
-      );
+      return handleApiError(error, 'Failed to fetch your profile');
     }
   }
 );
@@ -25,37 +23,46 @@ export const fetchProfile = createAsyncThunk(
   'profile/fetch',
   async (profileId, { rejectWithValue }) => {
     try {
-      // Validate profileId
-      if (!profileId || isNaN(profileId)) {
-        return rejectWithValue({ message: 'Invalid profile ID' });
+      // Ensure profileId is valid
+      if (!profileId) {
+        throw new Error('Invalid profile ID');
       }
+      
       const response = await profileService.getProfile(profileId);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch profile' }
-      );
+      return handleApiError(error, 'Failed to fetch profile');
     }
   }
 );
 
 export const updateProfile = createAsyncThunk(
   'profile/update',
-  async ({ profileId, profileData }, { rejectWithValue }) => {
+  async ({ profileData }, { rejectWithValue }) => {
     try {
-      const response = await profileService.updateProfile(profileId, profileData);
+      // No need to pass ID - backend will use current user
+      const response = await profileService.updateProfile(profileData);
       
-      return {
-        ...response.data,
-        userId: profileId  // or extract from response if available
-      };
+      return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to update profile' }
-      );
+      return handleApiError(error, 'Failed to update profile');
     }
   }
 );
+
+// Helper function for consistent error handling
+const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  if (error.response) {
+    // Server responded with error
+    return error.response.data;
+  } else if (error.request) {
+    // No response received
+    return { message: 'No response from server. Please check your internet connection.' };
+  } else {
+    // Request setup error
+    return { message: `Error: ${error.message || defaultMessage}` };
+  }
+};
 
 const profileSlice = createSlice({
   name: 'profile',

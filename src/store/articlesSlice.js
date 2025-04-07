@@ -1,3 +1,4 @@
+// src/store/articlesSlice.js - Updated version
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { articlesService } from '../services/api';
 
@@ -18,9 +19,7 @@ export const fetchArticles = createAsyncThunk(
       const response = await articlesService.getAll(params);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch articles' }
-      );
+      return handleApiError(error, 'Failed to fetch articles');
     }
   }
 );
@@ -32,9 +31,7 @@ export const fetchArticleById = createAsyncThunk(
       const response = await articlesService.getById(id);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to fetch article' }
-      );
+      return handleApiError(error, 'Failed to fetch article');
     }
   }
 );
@@ -46,23 +43,19 @@ export const createArticle = createAsyncThunk(
       const response = await articlesService.create(articleData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to create article' }
-      );
+      return handleApiError(error, 'Failed to create article');
     }
   }
 );
 
 export const updateArticle = createAsyncThunk(
   'articles/update',
-  async ({ id, articleData }, { rejectWithValue }) => {
+  async ({ id, ...articleData }, { rejectWithValue }) => {
     try {
       const response = await articlesService.update(id, articleData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to update article' }
-      );
+      return handleApiError(error, 'Failed to update article');
     }
   }
 );
@@ -74,12 +67,24 @@ export const deleteArticle = createAsyncThunk(
       await articlesService.delete(id);
       return id;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: 'Failed to delete article' }
-      );
+      return handleApiError(error, 'Failed to delete article');
     }
   }
 );
+
+// Helper function for consistent error handling
+const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  if (error.response) {
+    // Server responded with error
+    return error.response.data;
+  } else if (error.request) {
+    // No response received
+    return { message: 'No response from server. Please check your internet connection.' };
+  } else {
+    // Request setup error
+    return { message: `Error: ${error.message || defaultMessage}` };
+  }
+};
 
 // Articles slice
 const articlesSlice = createSlice({
@@ -110,6 +115,7 @@ const articlesSlice = createSlice({
           state.articles = action.payload.results;
           state.totalPages = action.payload.total_pages || 
                             Math.ceil(action.payload.count / 10); // Assuming 10 per page
+          state.currentPage = action.payload.current_page || 1;
         } else {
           state.articles = action.payload;
           state.totalPages = 1;
