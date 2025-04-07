@@ -1,40 +1,52 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../services/api';
 
-// Check if user is already logged in from localStorage
-const user = JSON.parse(localStorage.getItem('user'));
+// Initialize state from localStorage
+const getUserFromStorage = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user'));
+  } catch (error) {
+    console.error('Failed to parse user from localStorage:', error);
+    return null;
+  }
+};
+
 const initialState = {
-  user: user || null,
-  isAuthenticated: !!user,
+  user: getUserFromStorage(),
+  isAuthenticated: !!localStorage.getItem('access_token'),
   isLoading: false,
   error: null
 };
 
-// Async thunks
+/**
+ * Register a new user
+ */
 export const registerUser = createAsyncThunk(
-  'api/register',
+  'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      // Rename confirmPassword to password2 for Django REST framework
+      // Format data for Django REST framework
       const apiData = {
         ...userData,
         password2: userData.confirmPassword || userData.password2 || userData.password
       };
       
-      // Remove confirmPassword if it exists
       if (apiData.confirmPassword) {
         delete apiData.confirmPassword;
       }
       
-      console.log('Registering user with data:', { ...apiData, password: '***', password2: '***' });
+      console.log('Registering user with data:', { 
+        ...apiData, 
+        password: '[REDACTED]', 
+        password2: '[REDACTED]' 
+      });
+      
       const response = await authService.register(apiData);
-      console.log('Registration successful, received tokens');
-   
-      // Save tokens
+      console.log('Registration successful');
+      
+      // Store auth data
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
-      
-      // Save user info
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
       return {
@@ -42,32 +54,18 @@ export const registerUser = createAsyncThunk(
         access: response.data.access,
         refresh: response.data.refresh
       };
- 
-
     } catch (error) {
       console.error('Registration error:', error);
-      if (error.response) {
-        return rejectWithValue(error.response.data);
-      } else if (error.request) {
-        // The request was made but no response was received
-        return rejectWithValue({ 
-          message: 'No response from server. Please check your internet connection.' 
-        });
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        return rejectWithValue({ 
-          message: 'Error during request setup: ' + error.message 
-        });
-      }
+      return handleApiError(error);
     }
   }
 );
 
+/**
+ * Login an existing user
+ */
 export const loginUser = createAsyncThunk(
-  'api/token/',
+  'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
       console.log('Attempting login with username:', credentials.username);
@@ -80,7 +78,7 @@ export const loginUser = createAsyncThunk(
       
       // Fetch user details with the token
       try {
-        console.log('Fetching user details with new token');
+        console.log('Fetching user details');
         const userResponse = await authService.getUserDetails();
         const userData = userResponse.data;
         
@@ -98,36 +96,14 @@ export const loginUser = createAsyncThunk(
       }
     } catch (error) {
       console.error('Login error:', error);
-      // More detailed error handling
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        const errorData = error.response.data;
-        
-        // Handle common authentication errors with user-friendly messages
-        if (error.response.status === 401) {
-          return rejectWithValue({ 
-            message: 'Invalid credentials. Please check your username and password.' 
-          });
-        }
-        
-        return rejectWithValue(errorData);
-      } else if (error.request) {
-        // The request was made but no response was received
-        return rejectWithValue({ 
-          message: 'No response from server. Please check your internet connection.' 
-        });
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        return rejectWithValue({ 
-          message: 'Error during request setup: ' + error.message 
-        });
-      }
+      return handleApiError(error);
     }
   }
 );
 
-// For refreshing tokens
+/**
+ * Refresh the authentication token
+ */
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',
   async (_, { rejectWithValue }) => {
@@ -137,28 +113,62 @@ export const refreshToken = createAsyncThunk(
         throw new Error('No refresh token available');
       }
       
-      console.log('Manually refreshing token');
+      console.log('Refreshing token');
       const response = await authService.refreshToken(refreshToken);
-      console.log('Token manually refreshed successfully');
+      console.log('Token refreshed successfully');
       
       localStorage.setItem('access_token', response.data.access);
       
       return response.data;
     } catch (error) {
-      console.error('Manual token refresh failed:', error);
-      // If refresh fails, we'll need to re-login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      
-      return rejectWithValue(
-        error.response?.data || { message: 'Session expired. Please log in again.' }
-      );
+      console.error('Token refresh failed:', error);
+      clearAuthStorage();
+      return handleApiError(error, 'Session expired. Please log in again.');
     }
   }
 );
 
-// Create the slice directly and handle the logout action internally
+/**
+ * Deactivate user account
+ */
+export const deactivateAccount = createAsyncThunk(
+  'auth/deactivate',
+  async (password, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await authService.deactivateAccount(password);
+      dispatch(logout());
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to deactivate account');
+    }
+  }
+);
+
+// Helper function for consistent error handling
+const handleApiError = (error, defaultMessage = 'An error occurred') => {
+  if (error.response) {
+    // Server responded with error
+    if (error.response.status === 401) {
+      return { message: 'Invalid credentials. Please check your username and password.' };
+    }
+    return error.response.data;
+  } else if (error.request) {
+    // No response received
+    return { message: 'No response from server. Please check your internet connection.' };
+  } else {
+    // Request setup error
+    return { message: `Error: ${error.message || defaultMessage}` };
+  }
+};
+
+// Helper function to clear all auth storage items
+const clearAuthStorage = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+};
+
+// Create the auth slice
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -167,27 +177,31 @@ const authSlice = createSlice({
       console.log('Logging out, clearing auth state and tokens');
       // Call the service but don't wait for it
       authService.logout();
+      
       // Update the state
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
       
-      // Ensure tokens are cleared
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      clearAuthStorage();
     },
     clearError: (state) => {
       state.error = null;
     },
-    // Add action to manually update authentication state based on token presence
     checkAuthState: (state) => {
       const token = localStorage.getItem('access_token');
       const userData = localStorage.getItem('user');
       
       if (token && userData) {
-        state.isAuthenticated = true;
-        state.user = JSON.parse(userData);
+        try {
+          state.isAuthenticated = true;
+          state.user = JSON.parse(userData);
+        } catch (error) {
+          console.error('Failed to parse user data:', error);
+          state.isAuthenticated = false;
+          state.user = null;
+          clearAuthStorage();
+        }
       } else {
         state.isAuthenticated = false;
         state.user = null;
@@ -209,10 +223,7 @@ const authSlice = createSlice({
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        // Ensure no partial data remains
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        clearAuthStorage();
       })
       
       // Login cases
@@ -224,42 +235,42 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        
-        // Double-check tokens are stored
-        if (action.payload.access && action.payload.refresh) {
-          localStorage.setItem('access_token', action.payload.access);
-          localStorage.setItem('refresh_token', action.payload.refresh);
-          localStorage.setItem('user', JSON.stringify(action.payload.user));
-        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        // Ensure no partial data remains
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        clearAuthStorage();
       })
       
       // Token refresh cases
       .addCase(refreshToken.pending, (state) => {
         state.isLoading = true;
-        state.error = null;
       })
       .addCase(refreshToken.fulfilled, (state) => {
         state.isLoading = false;
-        // We don't need to update authentication state otherwise as the token is stored in localStorage
       })
       .addCase(refreshToken.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload;
-        
-        // Ensure tokens are cleared on failed refresh
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        clearAuthStorage();
+      })
+      
+      // Deactivate account cases
+      .addCase(deactivateAccount.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deactivateAccount.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        clearAuthStorage();
+      })
+      .addCase(deactivateAccount.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   }
 });

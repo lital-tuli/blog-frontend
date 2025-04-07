@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import axios from 'axios';
 
 // Base query with auth handling
 const baseQuery = fetchBaseQuery({
@@ -86,6 +87,15 @@ export const blogApi = createApi({
         method: 'POST',
         body: { refresh: refreshToken },
       }),
+    }),
+    
+    deactivateAccount: builder.mutation({
+      query: (password) => ({
+        url: 'deactivate/',
+        method: 'POST',
+        body: { password },
+      }),
+      invalidatesTags: ['Users'],
     }),
     
     // User endpoints
@@ -200,6 +210,7 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useRefreshTokenMutation,
+  useDeactivateAccountMutation,
   
   // User hooks
   useGetCurrentUserQuery,
@@ -221,9 +232,6 @@ export const {
   useGetUserProfileQuery,
   useUpdateProfileMutation,
 } = blogApi;
-
-// Export the original axios instance for any custom calls
-import axios from 'axios';
 
 // Create axios instance
 const api = axios.create({
@@ -298,7 +306,8 @@ export const authService = {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
-  }
+  },
+  deactivateAccount: (password) => api.post('deactivate/', { password })
 };
 
 // Articles Service
