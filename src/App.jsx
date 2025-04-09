@@ -7,15 +7,15 @@ import './App.css'
 import Navbar from './components/layout/Navbar'
 
 // Pages
-import HomePage from './pages/HomePage'
-import ArticlesPage from './pages/ArticlesPage'
-import ArticleDetailPage from './pages/ArticleDetailPage'
-import AdminDashboard from './pages/AdminDashboard'
-import ArticleForm from './pages/ArticleForm'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ProfilePage from './pages/ProfilePage'
-import UnauthorizedPage from './pages/UnauthorizedPage' // Add this component
+import HomePage from './components/pages/HomePage.jsx';
+import ArticlesPage from './components/pages/ArticlesPage.jsx'
+import ArticleDetailPage from './components/pages/ArticleDetailPage.jsx'
+import AdminDashboard from './components/pages/AdminDashboard.jsx'
+import ArticleForm from './components/pages/ArticleForm.jsx'
+import LoginPage from './components/pages/LoginPage.jsx'
+import RegisterPage from './components/pages/RegisterPage.jsx'
+import ProfilePage from './components/pages/ProfilePage.jsx'
+import UnauthorizedPage from './components/pages/UnauthorizedPage.jsx' 
 
 // Common Components
 import PrivateRoute from './components/common/PrivateRoute'
@@ -82,14 +82,14 @@ function App() {
               path="/profile/:id" 
               element={<ProfilePage />} 
             />
-<Route 
-  path="/admin" 
-  element={
-    <PrivateRoute requiresAdmin={true}>
-      <AdminDashboard />
-    </PrivateRoute>
-  } 
-/>
+            <Route 
+              path="/admin" 
+              element={
+                <PrivateRoute requiresAdmin={true}>
+                  <AdminDashboard />
+                </PrivateRoute>
+              } 
+            />
             
             {/* Fallback Route */}
             <Route path="*" element={<Navigate to="/" replace />} />
