@@ -3,11 +3,11 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Formik, Form, Field, ErrorMessage as FormikErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { fetchArticleById, createArticle, updateArticle, clearArticle } from '../store/articlesSlice';
-import { useToastContext } from '../context/ToastContext';
-import { handleApiErrorWithUI } from '../utils/errorHandler';
-import Loading from '../components/common/Loading';
-import ErrorMessageComponent from '../components/common/ErrorMessage';
+import { fetchArticleById, createArticle, updateArticle, clearArticle } from '../../store/articlesSlice';
+import { useToastContext } from '../../context/ToastContext';
+import { handleApiErrorWithUI } from '../../utils/errorHandler';
+import Loading from '../common/Loading';
+import ErrorMessageComponent from '../common/ErrorMessage';
 
 // Validation schema for the article form
 const ArticleSchema = Yup.object().shape({
