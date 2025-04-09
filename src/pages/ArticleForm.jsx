@@ -57,29 +57,35 @@ const ArticleForm = () => {
     };
   }, [dispatch, id, showError]);
   
-  const handleSubmit = (values, { setSubmitting, setFieldError }) => {
-    const formattedValues = {
-      ...values,
-      tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : []
-    };
-    
-    const action = isEditMode
-      ? updateArticle({ id, ...formattedValues })
-      : createArticle(formattedValues);
-    
-    dispatch(action)
-      .unwrap()
-      .then((result) => {
-        showSuccess(`Article ${isEditMode ? 'updated' : 'created'} successfully!`);
-        navigate(`/articles/${result.id}`);
-      })
-      .catch((err) => {
-        handleApiErrorWithUI(err, showError, setFieldError);
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
+ // src/pages/ArticleForm.jsx
+// (Partial code update)
+
+const handleSubmit = (values, { setSubmitting, setFieldError }) => {
+  const formattedValues = {
+    ...values,
+    tags: values.tags ? values.tags.split(',').map(tag => tag.trim()) : []
   };
+  
+  const action = isEditMode
+    ? updateArticle({ id, ...formattedValues })
+    : createArticle(formattedValues);
+  
+  dispatch(action)
+    .unwrap()
+    .then((result) => {
+      // Invalidate cache after creating/updating an article
+      dispatch(invalidateCache());
+      
+      showSuccess(`Article ${isEditMode ? 'updated' : 'created'} successfully!`);
+      navigate(`/articles/${result.id}`);
+    })
+    .catch((err) => {
+      handleApiErrorWithUI(err, showError, setFieldError);
+    })
+    .finally(() => {
+      setSubmitting(false);
+    });
+};
   
   const handleImageChange = (event, setFieldValue) => {
     const file = event.currentTarget.files[0];

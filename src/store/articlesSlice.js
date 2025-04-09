@@ -1,3 +1,4 @@
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { articlesService } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
@@ -179,9 +180,9 @@ const articlesSlice = createSlice({
       })
       .addCase(createArticle.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.lastFetched = null; // Invalidate cache on mutation
         if (action.payload && Array.isArray(state.articles)) {
           state.articles.unshift(action.payload); // Add new article to the start of the array
-          state.lastFetched = null; // Invalidate cache on mutation
         }
       })
       .addCase(createArticle.rejected, (state, action) => {

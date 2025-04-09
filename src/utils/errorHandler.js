@@ -5,33 +5,60 @@
  * @param {string} defaultMessage - Default message to show if no error message is available
  * @returns {Object} Formatted error object
  */
+// src/utils/errorHandler.js
 export const handleApiError = (error, defaultMessage = 'An error occurred') => {
     console.error('API Error:', error);
     
+    let errorMessage = defaultMessage;
+    let statusCode = null;
+    let fieldErrors = {};
+    
     if (error.response) {
-      // Server responded with error
-      return {
-        message: error.response.data?.message || 
-                 error.response.data?.detail || 
-                 defaultMessage,
-        errors: error.response.data?.errors || {},
-        statusCode: error.response.status
-      };
+      statusCode = error.response.status;
+      
+      // Handle various response formats
+      if (typeof error.response.data === 'string') {
+        errorMessage = error.response.data;
+      } else if (error.response.data) {
+        // Extract main error message
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.non_field_errors) {
+          errorMessage = error.response.data.non_field_errors[0];
+        }
+        
+        // Extract field errors
+        if (error.response.data.errors) {
+          fieldErrors = error.response.data.errors;
+        } else {
+          // Look for field-specific errors
+          for (const key in error.response.data) {
+            if (key !== 'message' && key !== 'detail' && key !== 'error' && key !== 'non_field_errors') {
+              fieldErrors[key] = Array.isArray(error.response.data[key]) 
+                ? error.response.data[key].join(' ') 
+                : error.response.data[key];
+            }
+          }
+        }
+      }
     } else if (error.request) {
-      // No response received
-      return { 
-        message: 'No response from server. Please check your internet connection.',
-        statusCode: 0
-      };
-    } else {
-      // Request setup error
-      return { 
-        message: error.message || defaultMessage,
-        statusCode: 0
-      };
+      // Request was made but no response received
+      errorMessage = 'No response from server. Please check your connection.';
+    } else if (error.message) {
+      // Something happened in setting up the request
+      errorMessage = error.message;
     }
+    
+    return {
+      message: errorMessage,
+      statusCode,
+      fieldErrors
+    };
   };
-  
   /**
    * Format field-specific validation errors from API
    * @param {Object} errors - API error response
@@ -69,15 +96,9 @@ export const handleApiError = (error, defaultMessage = 'An error occurred') => {
     showError(errorData.message);
     
     // Set field errors if form validation function is provided
-    if (setFieldErrors && errorData.errors) {
-      setFieldErrors(formatValidationErrors(errorData.errors));
+    if (setFieldErrors && errorData.fieldErrors) {
+      setFieldErrors(formatValidationErrors(errorData.fieldErrors));
     }
     
     return errorData;
-  };
-  
-  export default {
-    handleApiError,
-    formatValidationErrors,
-    handleApiErrorWithUI
   };

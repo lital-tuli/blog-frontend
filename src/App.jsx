@@ -10,6 +10,7 @@ import Navbar from './components/layout/Navbar'
 import HomePage from './pages/HomePage'
 import ArticlesPage from './pages/ArticlesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
+import AdminDashboard from './pages/AdminDashboard'
 import ArticleForm from './pages/ArticleForm'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -81,6 +82,14 @@ function App() {
               path="/profile/:id" 
               element={<ProfilePage />} 
             />
+<Route 
+  path="/admin" 
+  element={
+    <PrivateRoute requiresAdmin={true}>
+      <AdminDashboard />
+    </PrivateRoute>
+  } 
+/>
             
             {/* Fallback Route */}
             <Route path="*" element={<Navigate to="/" replace />} />

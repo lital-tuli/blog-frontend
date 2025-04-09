@@ -1,5 +1,8 @@
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { articlesService, commentsService } from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
+import { invalidateCache } from './articlesSlice';
 
 const initialState = {
   comments: [],
@@ -15,72 +18,74 @@ export const fetchComments = createAsyncThunk(
       const response = await articlesService.getComments(articleId);
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to fetch comments');
+      return rejectWithValue(handleApiError(error, 'Failed to fetch comments'));
     }
   }
 );
 
 export const addComment = createAsyncThunk(
   'comments/add',
-  async (commentData, { rejectWithValue }) => {
+  async (commentData, { dispatch, rejectWithValue }) => {
     try {
       const response = await commentsService.create(commentData);
+      
+      // Invalidate article cache to refresh comment counts
+      dispatch(invalidateCache());
+      
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to add comment');
+      return rejectWithValue(handleApiError(error, 'Failed to add comment'));
     }
   }
 );
 
 export const addReply = createAsyncThunk(
   'comments/reply',
-  async ({ commentId, replyData }, { rejectWithValue }) => {
+  async ({ commentId, replyData }, { dispatch, rejectWithValue }) => {
     try {
       const response = await commentsService.reply(commentId, replyData);
+      
+      // Invalidate article cache to refresh comment counts
+      dispatch(invalidateCache());
+      
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to add reply');
+      return rejectWithValue(handleApiError(error, 'Failed to add reply'));
     }
   }
 );
 
 export const updateComment = createAsyncThunk(
   'comments/update',
-  async ({ commentId, content }, { rejectWithValue }) => {
+  async ({ commentId, content }, { dispatch, rejectWithValue }) => {
     try {
       const response = await commentsService.update(commentId, { content });
+      
+      // No need to invalidate article cache for comment updates
+      // as it doesn't affect comment counts
+      
       return response.data;
     } catch (error) {
-      return handleApiError(error, 'Failed to update comment');
+      return rejectWithValue(handleApiError(error, 'Failed to update comment'));
     }
   }
 );
 
 export const deleteComment = createAsyncThunk(
   'comments/delete',
-  async (commentId, { rejectWithValue }) => {
+  async (commentId, { dispatch, rejectWithValue }) => {
     try {
       await commentsService.delete(commentId);
+      
+      // Invalidate article cache to refresh comment counts
+      dispatch(invalidateCache());
+      
       return commentId;
     } catch (error) {
-      return handleApiError(error, 'Failed to delete comment');
+      return rejectWithValue(handleApiError(error, 'Failed to delete comment'));
     }
   }
 );
-
-// Helper function for consistent error handling
-const handleApiError = (error, defaultMessage = 'An error occurred') => {
-  if (error.response) {
-    // Server responded with error
-    return error.response.data;
-  } else if (error.request) {
-    // No response received
-    return { message: 'No response from server. Please check your internet connection.' };
-  } else {
-    // Request setup error
-    return { message: `Error: ${error.message || defaultMessage}` };
-  }
-};
 
 // Improved function to recursively find and update a comment or reply
 const findAndUpdateComment = (comments, targetId, updateFn) => {
